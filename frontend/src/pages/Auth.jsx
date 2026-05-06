@@ -59,20 +59,9 @@ export default function Auth({ onLogin }) {
           {/* Subtle grid pattern inside card */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
 
-          <div className="flex gap-4 mb-8 relative z-10">
-            <button 
-              onClick={() => { setIsLogin(true); setError(""); }}
-              className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-colors ${isLogin ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-              System Login
-            </button>
-            <button 
-              onClick={() => { setIsLogin(false); setError(""); }}
-              className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-colors ${!isLogin ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-              Create Account
-            </button>
-          </div>
+          <h2 className="text-2xl font-bold text-white text-center mb-8 relative z-10">
+            {isLogin ? "System Login" : "Create Account"}
+          </h2>
 
           <form onSubmit={handleSubmit} className="relative z-10">
             <div className="space-y-5">
@@ -131,6 +120,30 @@ export default function Auth({ onLogin }) {
               )}
             </button>
           </form>
+
+          <div className="mt-6 text-center relative z-10">
+            {isLogin ? (
+              <p className="text-gray-400 text-sm">
+                New agent?{" "}
+                <button 
+                  onClick={() => { setIsLogin(false); setError(""); }}
+                  className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline transition-all"
+                >
+                  Create an account
+                </button>
+              </p>
+            ) : (
+              <p className="text-gray-400 text-sm">
+                Already have clearance?{" "}
+                <button 
+                  onClick={() => { setIsLogin(true); setError(""); }}
+                  className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline transition-all"
+                >
+                  Sign in
+                </button>
+              </p>
+            )}
+          </div>
         </div>
         
         <p className="text-center text-gray-600 text-xs mt-6 uppercase tracking-widest">
