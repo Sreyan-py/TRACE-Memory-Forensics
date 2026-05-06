@@ -60,7 +60,7 @@ export default function Analysis() {
     formData.append("file", file);
 
     try {
-      const response = await axios.post("http://127.0.0.1:5001/upload", formData);
+      const response = await axios.post("https://trace-memory-forensics.onrender.com/upload", formData);
       clearInterval(progressInterval);
       setScanProgress(100);
       

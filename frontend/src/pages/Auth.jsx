@@ -17,7 +17,7 @@ export default function Auth({ onLogin }) {
     const endpoint = isLogin ? "/login" : "/signup";
     
     try {
-      const response = await axios.post(`http://127.0.0.1:5001${endpoint}`, {
+      const response = await axios.post(`https://trace-memory-forensics.onrender.com${endpoint}`, {
         username,
         password
       });

@@ -65,7 +65,7 @@ def upload_file():
         }), 400
     
     report_filename = generate_pdf_report(analysis_result, file.filename)
-    report_url = f"http://127.0.0.1:5001/reports/{report_filename}"
+    report_url = f"https://trace-memory-forensics.onrender.com/reports/{report_filename}"
 
     return jsonify({
         "message": "Analysis Complete",
