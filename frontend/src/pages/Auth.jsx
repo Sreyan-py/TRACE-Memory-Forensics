@@ -70,7 +70,7 @@ export default function Auth({ onLogin }) {
               onClick={() => { setIsLogin(false); setError(""); }}
               className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-colors ${!isLogin ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              Request Access
+              Create Account
             </button>
           </div>
 
@@ -126,7 +126,7 @@ export default function Auth({ onLogin }) {
                 "Authenticating..."
               ) : (
                 <>
-                  {isLogin ? "Initialize Session" : "Generate Credentials"} <ArrowRight size={18} />
+                  {isLogin ? "Initialize Session" : "Create Account"} <ArrowRight size={18} />
                 </>
               )}
             </button>
