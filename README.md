@@ -1,5 +1,13 @@
 # TRACE: Advanced Memory Forensics SOC Dashboard
 
+## 🚀 Live Deployment
+
+🌐 Frontend:
+https://trace-memory-forensics.vercel.app
+
+⚙️ Backend API:
+https://trace-memory-forensics.onrender.com
+
 TRACE is a sophisticated, enterprise-grade Security Operations Center (SOC) dashboard and simulated memory forensics engine. Designed to detect zero-day rootkits, fileless malware, and advanced persistent threats (APTs), TRACE provides a breathtaking cyber-aesthetic UI and a highly detailed backend analysis engine.
 
 ## 🚀 Features
