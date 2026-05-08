@@ -103,12 +103,20 @@ http://localhost:5173
 
 ## 🛡️ Usage
 
-1. Open your browser to `http://localhost:5173`
+1. Open the deployed application:
+   https://trace-memory-forensics.vercel.app
+
 2. Create a new Agent account using the secure Authentication Portal
+
 3. Navigate to the Analysis tab
+
 4. Upload a memory dump (or any file to test the simulation engine)
+
 5. Review Indicators of Compromise (IOCs)
-6. Download the official PDF forensic report
+
+6. Analyze Suspicious Processes, DLL Injections, Registry Anomalies, and Network Threats
+
+7. Download the official PDF forensic investigation report
 
 ---
 
