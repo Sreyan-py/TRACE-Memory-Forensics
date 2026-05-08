@@ -6,20 +6,20 @@ import {
 } from "recharts";
 
 const activityData = [
-  { name: 'Mon', scans: 14, threats: 2 },
-  { name: 'Tue', scans: 27, threats: 5 },
-  { name: 'Wed', scans: 15, threats: 1 },
-  { name: 'Thu', scans: 32, threats: 12 },
-  { name: 'Fri', scans: 28, threats: 3 },
-  { name: 'Sat', scans: 13, threats: 0 },
-  { name: 'Sun', scans: 16, threats: 1 },
+  { day: "Mon", threats: 8, resolved: 6 },
+  { day: "Tue", threats: 12, resolved: 9 },
+  { day: "Wed", threats: 7, resolved: 5 },
+  { day: "Thu", threats: 18, resolved: 14 },
+  { day: "Fri", threats: 10, resolved: 8 },
+  { day: "Sat", threats: 4, resolved: 3 },
+  { day: "Sun", threats: 6, resolved: 5 },
 ];
 
 const distributionData = [
-  { name: 'Rootkits', value: 400 },
-  { name: 'Trojans', value: 300 },
-  { name: 'Spyware', value: 300 },
-  { name: 'Worms', value: 200 },
+  { name: "Trojans", value: 35 },
+  { name: "Spyware", value: 25 },
+  { name: "Rootkits", value: 20 },
+  { name: "Worms", value: 20 },
 ];
 
 const COLORS = ['#ef4444', '#f97316', '#22d3ee', '#8b5cf6'];
@@ -33,10 +33,10 @@ const trendData = [
 
 export default function Dashboard() {
   const stats = [
-    { title: "Total Dumps Analyzed", value: "3,492", icon: <HardDrive size={24} className="text-cyan-400" />, trend: "+18%" },
-    { title: "Critical Threats Found", value: "184", icon: <ShieldAlert size={24} className="text-red-400" />, trend: "-2%" },
-    { title: "System Health Score", value: "94%", icon: <Activity size={24} className="text-green-400" />, trend: "+1%" },
-    { title: "Active Nodes", value: "24", icon: <Cpu size={24} className="text-indigo-400" />, trend: "0%" },
+    { title: "Total Dumps Analyzed", value: "1,284", icon: <HardDrive size={24} className="text-cyan-400" />, trend: "+5.2%" },
+    { title: "Critical Threats Found", value: "37", icon: <ShieldAlert size={24} className="text-red-400" />, trend: "-12%" },
+    { title: "System Health Score", value: "96%", icon: <Activity size={24} className="text-green-400" />, trend: "+0.5%" },
+    { title: "Active Nodes", value: "12", icon: <Cpu size={24} className="text-indigo-400" />, trend: "0%" },
   ];
 
   return (
@@ -82,11 +82,12 @@ export default function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis dataKey="name" stroke="#ffffff50" axisLine={false} tickLine={false} />
+                <XAxis dataKey="day" stroke="#ffffff50" axisLine={false} tickLine={false} />
                 <YAxis stroke="#ffffff50" axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} />
-                <Area type="monotone" dataKey="scans" stroke="#22d3ee" strokeWidth={3} fillOpacity={1} fill="url(#colorScans)" />
+                <Legend />
                 <Area type="monotone" dataKey="threats" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorThreats)" />
+                <Area type="monotone" dataKey="resolved" stroke="#22d3ee" strokeWidth={3} fillOpacity={1} fill="url(#colorScans)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -136,6 +137,29 @@ export default function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      {/* Live SOC Metrics */}
+      <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 p-5 rounded-2xl flex items-center justify-between">
+          <div>
+            <p className="text-gray-400 text-xs uppercase tracking-widest font-bold mb-1">Last Scan</p>
+            <p className="text-white font-mono font-bold">2 mins ago</p>
+          </div>
+          <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+        </div>
+        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 p-5 rounded-2xl">
+          <p className="text-gray-400 text-xs uppercase tracking-widest font-bold mb-1">IOCs Detected</p>
+          <p className="text-white font-mono font-bold text-xl">14</p>
+        </div>
+        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 p-5 rounded-2xl">
+          <p className="text-gray-400 text-xs uppercase tracking-widest font-bold mb-1">High Severity Alerts</p>
+          <p className="text-red-400 font-mono font-bold text-xl">3</p>
+        </div>
+        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 p-5 rounded-2xl">
+          <p className="text-gray-400 text-xs uppercase tracking-widest font-bold mb-1">Processes Analyzed</p>
+          <p className="text-cyan-400 font-mono font-bold text-xl">412</p>
         </div>
       </div>
     </div>
