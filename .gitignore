@@ -1,0 +1,10 @@
+venv/
+volatility3/
+samples/
+sample_dumps/
+__pycache__/
+*.raw
+*.mem
+*.dmp
+*.7z
+*.zip
