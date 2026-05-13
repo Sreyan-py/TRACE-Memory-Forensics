@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.exceptions import RequestEntityTooLarge
 # pyrefly: ignore [missing-import]
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey
 # pyrefly: ignore [missing-import]
@@ -31,10 +32,7 @@ os.makedirs(REPORTS_FOLDER, exist_ok=True)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 # 1GB limit
 
-ALLOWED_EXTENSIONS = {'raw', 'mem', 'dmp', 'img'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# Removed strict ALLOWED_EXTENSIONS to permit all file types
 
 # Centralized DB setup
 # Use PostgreSQL if provided, otherwise fallback to local SQLite
@@ -87,7 +85,7 @@ def get_file_hash(filepath):
             sha256.update(chunk)
     return sha256.hexdigest()
 
-from werkzeug.exceptions import RequestEntityTooLarge
+
 
 @app.route("/")
 def home():
@@ -107,9 +105,6 @@ def upload_file():
         file = request.files["file"]
         if file.filename == "":
             return jsonify({"error": "Empty filename"}), 400
-            
-        if not allowed_file(file.filename):
-            return jsonify({"error": "Invalid file type. Allowed extensions: .raw, .mem, .dmp, .img"}), 400
 
         user = db.query(User).filter(User.username == username).first()
         if not user:
