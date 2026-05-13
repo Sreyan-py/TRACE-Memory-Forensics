@@ -34,7 +34,6 @@ export default function Analysis() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const isValidDump = file ? ['raw', 'mem', 'dmp', 'img'].includes(file.name.split('.').pop().toLowerCase()) : false;
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -169,21 +168,12 @@ export default function Analysis() {
                       Preview PDF
                     </button>
                   )}
-                  {!isValidDump ? (
-                    <button
-                      disabled
-                      className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-gray-500 bg-gray-800/50 cursor-not-allowed border border-gray-700"
-                    >
-                      Unsupported format
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleUpload}
-                      className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-white transition shadow-[0_0_30px_rgba(34,211,238,0.4)] bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500"
-                    >
-                      <Search size={20} /> Launch Deep Scan
-                    </button>
-                  )}
+                  <button
+                    onClick={handleUpload}
+                    className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-white transition shadow-[0_0_30px_rgba(34,211,238,0.4)] bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500"
+                  >
+                    <Search size={20} /> Launch Deep Scan
+                  </button>
                 </div>
               )}
             </div>
