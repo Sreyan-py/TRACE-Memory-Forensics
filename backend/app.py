@@ -1,57 +1,81 @@
-from analysis.volatility_runner import analyze_memory
-from analysis.report_generator import generate_pdf_report
+import os
+import hashlib
+import json
+from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
-import os
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+
+from analysis.volatility_runner import analyze_memory
+from analysis.report_generator import generate_pdf_report
 
 app = Flask(__name__)
 CORS(app)
 
 UPLOAD_FOLDER = "uploads"
 REPORTS_FOLDER = "reports"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(REPORTS_FOLDER, exist_ok=True)
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-if not os.path.exists(REPORTS_FOLDER):
-    os.makedirs(REPORTS_FOLDER)
+# Centralized DB setup
+# Use PostgreSQL if provided, otherwise fallback to local SQLite
+DB_URL = os.environ.get("DATABASE_URL", "sqlite:///users.db")
+if DB_URL.startswith("postgres://"):
+    DB_URL = DB_URL.replace("postgres://", "postgresql://", 1)
 
-DB_FILE = "users.db"
+engine = create_engine(DB_URL, connect_args={"check_same_thread": False} if "sqlite" in DB_URL else {})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL
-                 )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS scans (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    filename TEXT NOT NULL,
-                    threat_score INTEGER NOT NULL,
-                    severity TEXT NOT NULL,
-                    scan_timestamp TEXT NOT NULL,
-                    report_path TEXT NOT NULL,
-                    dump_size INTEGER,
-                    suspicious_process_count INTEGER,
-                    FOREIGN KEY(user_id) REFERENCES users(id)
-                 )''')
-    conn.commit()
-    conn.close()
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    password = Column(String(255), nullable=False)
+    scans = relationship("Scan", back_populates="user")
 
-init_db()
+class Scan(Base):
+    __tablename__ = "scans"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    filename = Column(String(255), nullable=False)
+    file_hash = Column(String(64), nullable=False, index=True)
+    threat_score = Column(Integer, nullable=False)
+    severity = Column(String(20), nullable=False)
+    scan_timestamp = Column(String(50), nullable=False)
+    report_path = Column(String(255), nullable=False)
+    dump_size = Column(Integer)
+    suspicious_process_count = Column(Integer)
+    user = relationship("User", back_populates="scans")
+
+class CachedAnalysis(Base):
+    __tablename__ = "cached_analysis"
+    file_hash = Column(String(64), primary_key=True, index=True)
+    filename = Column(String(255), nullable=False)
+    threat_score = Column(Integer, nullable=False)
+    severity = Column(String(20), nullable=False)
+    indicators = Column(Text, nullable=False) # JSON encoded string
+    plugin_results = Column(Text, nullable=False) # JSON encoded string
+    timestamp = Column(String(50), nullable=False)
+
+Base.metadata.create_all(bind=engine)
+
+def get_file_hash(filepath):
+    sha256 = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            sha256.update(chunk)
+    return sha256.hexdigest()
 
 @app.route("/")
 def home():
-    return {
-        "message": "TRACE Backend Running"
-    }
+    return {"message": "TRACE Backend Running (Deterministic & Cached)"}
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
+    db = SessionLocal()
     try:
         username = request.form.get("username")
         if not username:
@@ -61,9 +85,12 @@ def upload_file():
             return jsonify({"error": "No file uploaded"}), 400
 
         file = request.files["file"]
-
         if file.filename == "":
             return jsonify({"error": "Empty filename"}), 400
+
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
 
         filepath = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(filepath)
@@ -71,40 +98,73 @@ def upload_file():
         if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
             return jsonify({"error": "Uploaded file is empty or corrupted."}), 400
 
-        # Get user ID
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute("SELECT id FROM users WHERE username = ?", (username,))
-        user_row = c.fetchone()
-        if not user_row:
-            conn.close()
-            return jsonify({"error": "User not found"}), 404
-        user_id = user_row[0]
+        file_hash = get_file_hash(filepath)
+        dump_size = os.path.getsize(filepath)
 
-        analysis_result = analyze_memory(filepath)
-
-        if "error" in analysis_result:
-            conn.close()
-            return jsonify({
-                "error": f"Analysis failed: {analysis_result['error']}. Are you sure this is a valid memory dump?"
-            }), 400
+        # 1. Check cache
+        cached = db.query(CachedAnalysis).filter(CachedAnalysis.file_hash == file_hash).first()
         
+        if cached:
+            # Reconstruct analysis result
+            indicators = json.loads(cached.indicators)
+            analysis_result = {
+                "threat_score": cached.threat_score,
+                "severity": cached.severity,
+                "timestamps": {"scan_end": cached.timestamp, "scan_start": cached.timestamp},
+                "suspicious_processes": indicators.get("suspicious_processes", []),
+                "hidden_processes": indicators.get("hidden_processes", []),
+                "dll_injections": indicators.get("dll_injections", []),
+                "network_connections": indicators.get("network_connections", []),
+                "malware_indicators": indicators.get("malware_indicators", []),
+                "forensic_summary": "CACHED ANALYSIS (SHA256 Match): " + indicators.get("forensic_summary", "Analysis loaded from cache."),
+                "plugin_results": json.loads(cached.plugin_results)
+            }
+        else:
+            # 2. Run analysis deterministically
+            analysis_result = analyze_memory(filepath)
+            if "error" in analysis_result:
+                return jsonify({"error": f"Analysis failed: {analysis_result['error']}"}), 400
+                
+            # 3. Save to cache
+            indicators = {
+                "suspicious_processes": analysis_result.get("suspicious_processes", []),
+                "hidden_processes": analysis_result.get("hidden_processes", []),
+                "dll_injections": analysis_result.get("dll_injections", []),
+                "network_connections": analysis_result.get("network_connections", []),
+                "malware_indicators": analysis_result.get("malware_indicators", []),
+                "forensic_summary": analysis_result.get("forensic_summary", "")
+            }
+            
+            new_cache = CachedAnalysis(
+                file_hash=file_hash,
+                filename=file.filename,
+                threat_score=analysis_result["threat_score"],
+                severity=analysis_result["severity"],
+                indicators=json.dumps(indicators),
+                plugin_results=json.dumps(analysis_result.get("plugin_results", {})),
+                timestamp=analysis_result["timestamps"]["scan_end"]
+            )
+            db.add(new_cache)
+            db.commit()
+
+        # 4. Generate report
         report_filename = generate_pdf_report(analysis_result, file.filename)
         report_url = f"http://127.0.0.1:5001/reports/{report_filename}"
 
-        # Insert scan record
-        threat_score = analysis_result.get("threat_score", 0)
-        severity = analysis_result.get("severity", "LOW")
-        scan_timestamp = analysis_result.get("timestamps", {}).get("scan_end", "")
-        suspicious_process_count = len(analysis_result.get("suspicious_processes", []))
-        dump_size = os.path.getsize(filepath)
-
-        c.execute('''INSERT INTO scans 
-                     (user_id, filename, threat_score, severity, scan_timestamp, report_path, dump_size, suspicious_process_count)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
-                  (user_id, file.filename, threat_score, severity, scan_timestamp, report_filename, dump_size, suspicious_process_count))
-        conn.commit()
-        conn.close()
+        # 5. Record scan for user
+        scan = Scan(
+            user_id=user.id,
+            filename=file.filename,
+            file_hash=file_hash,
+            threat_score=analysis_result["threat_score"],
+            severity=analysis_result["severity"],
+            scan_timestamp=analysis_result["timestamps"]["scan_end"],
+            report_path=report_filename,
+            dump_size=dump_size,
+            suspicious_process_count=len(analysis_result.get("suspicious_processes", []))
+        )
+        db.add(scan)
+        db.commit()
 
         return jsonify({
             "message": "Analysis Complete",
@@ -113,47 +173,41 @@ def upload_file():
             "report_url": report_url
         })
     except Exception as e:
-        return jsonify({
-            "error": f"Internal server error during upload processing: {str(e)}"
-        }), 500
+        db.rollback()
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+    finally:
+        db.close()
 
 @app.route("/dashboard/stats/<username>", methods=["GET"])
 def dashboard_stats(username):
+    db = SessionLocal()
     try:
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        
-        c.execute("SELECT id FROM users WHERE username = ?", (username,))
-        user_row = c.fetchone()
-        if not user_row:
-            conn.close()
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
             return jsonify({"error": "User not found"}), 404
-        user_id = user_row[0]
-        
-        c.execute("SELECT threat_score, severity, scan_timestamp, suspicious_process_count FROM scans WHERE user_id = ? ORDER BY id ASC", (user_id,))
-        scans = c.fetchall()
-        conn.close()
+            
+        scans = db.query(Scan).filter(Scan.user_id == user.id).order_by(Scan.id.asc()).all()
         
         total_dumps = len(scans)
-        critical_threats = sum(1 for s in scans if s[1] in ("CRITICAL", "HIGH"))
-        avg_threat = sum(s[0] for s in scans) / total_dumps if total_dumps > 0 else 0
+        critical_threats = sum(1 for s in scans if s.severity in ("CRITICAL", "HIGH"))
+        avg_threat = sum(s.threat_score for s in scans) / total_dumps if total_dumps > 0 else 0
         health_score = max(0, int(100 - avg_threat))
         
         distribution = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
         for s in scans:
-            if s[1] in distribution:
-                distribution[s[1]] += 1
+            if s.severity in distribution:
+                distribution[s.severity] += 1
                 
         distribution_data = [{"name": k, "value": v} for k, v in distribution.items() if v > 0]
         if not distribution_data:
             distribution_data = [{"name": "No Threats", "value": 1}]
             
         activity_data = []
-        for i, s in enumerate(scans[-10:]): # Last 10 scans
+        for i, s in enumerate(scans[-10:]):
             activity_data.append({
                 "name": f"Scan {i+1}",
-                "threats": s[3],
-                "score": s[0]
+                "threats": s.suspicious_process_count or 0,
+                "score": s.threat_score
             })
 
         return jsonify({
@@ -165,46 +219,52 @@ def dashboard_stats(username):
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
 
 @app.route("/signup", methods=["POST"])
 def signup():
-    data = request.json
-    username = data.get("username")
-    password = data.get("password")
-    
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
-    
-    hashed_password = generate_password_hash(password)
-    
+    db = SessionLocal()
     try:
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
-        conn.commit()
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "Username already exists"}), 400
-    finally:
-        conn.close()
+        data = request.json
+        username = data.get("username")
+        password = data.get("password")
         
-    return jsonify({"message": "User created successfully"}), 201
+        if not username or not password:
+            return jsonify({"error": "Username and password required"}), 400
+            
+        existing_user = db.query(User).filter(User.username == username).first()
+        if existing_user:
+            return jsonify({"error": "Username already exists"}), 400
+            
+        hashed_password = generate_password_hash(password)
+        new_user = User(username=username, password=hashed_password)
+        db.add(new_user)
+        db.commit()
+        return jsonify({"message": "User created successfully"}), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
 
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.json
-    username = data.get("username")
-    password = data.get("password")
-    
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT password FROM users WHERE username = ?", (username,))
-    row = c.fetchone()
-    conn.close()
-    
-    if row and check_password_hash(row[0], password):
-        return jsonify({"message": "Login successful", "username": username}), 200
-    else:
-        return jsonify({"error": "Invalid username or password"}), 401
+    db = SessionLocal()
+    try:
+        data = request.json
+        username = data.get("username")
+        password = data.get("password")
+        
+        user = db.query(User).filter(User.username == username).first()
+        if user and check_password_hash(user.password, password):
+            return jsonify({"message": "Login successful", "username": username}), 200
+        else:
+            return jsonify({"error": "Invalid username or password"}), 401
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
 
 @app.route('/reports/<path:filename>')
 def download_report(filename):
