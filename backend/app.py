@@ -14,14 +14,18 @@ from analysis.report_generator import generate_pdf_report
 app = Flask(__name__)
 CORS(app)
 
-UPLOAD_FOLDER = "uploads"
-REPORTS_FOLDER = "reports"
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+REPORTS_FOLDER = os.path.join(BASE_DIR, "reports")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORTS_FOLDER, exist_ok=True)
 
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
+
 # Centralized DB setup
 # Use PostgreSQL if provided, otherwise fallback to local SQLite
-DB_URL = os.environ.get("DATABASE_URL", "sqlite:///users.db")
+fallback_db_path = os.path.join(BASE_DIR, "users.db")
+DB_URL = os.environ.get("DATABASE_URL", f"sqlite:///{fallback_db_path}")
 if DB_URL.startswith("postgres://"):
     DB_URL = DB_URL.replace("postgres://", "postgresql://", 1)
 
@@ -149,7 +153,8 @@ def upload_file():
 
         # 4. Generate report
         report_filename = generate_pdf_report(analysis_result, file.filename)
-        report_url = f"http://127.0.0.1:5001/reports/{report_filename}"
+        base_url = request.host_url.rstrip('/')
+        report_url = f"{base_url}/reports/{report_filename}"
 
         # 5. Record scan for user
         scan = Scan(
@@ -271,4 +276,5 @@ def download_report(filename):
     return send_from_directory(REPORTS_FOLDER, filename, as_attachment=True)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", debug=False, port=port)

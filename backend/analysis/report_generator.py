@@ -5,9 +5,10 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet
 
 def generate_pdf_report(analysis_data, original_filename):
-    reports_dir = "reports"
+    BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+    reports_dir = os.path.join(BASE_DIR, "reports")
     if not os.path.exists(reports_dir):
-        os.makedirs(reports_dir)
+        os.makedirs(reports_dir, exist_ok=True)
 
     report_filename = f"{original_filename}_report.pdf"
     report_path = os.path.join(reports_dir, report_filename)
