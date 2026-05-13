@@ -3,13 +3,17 @@ import hashlib
 import json
 from datetime import datetime
 import logging
+# pyrefly: ignore [missing-import]
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+# pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash, check_password_hash
+# pyrefly: ignore [missing-import]
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 from analysis.volatility_runner import analyze_memory
@@ -25,6 +29,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORTS_FOLDER, exist_ok=True)
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 # 1GB limit
+
+ALLOWED_EXTENSIONS = {'raw', 'mem', 'dmp', 'img'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Centralized DB setup
 # Use PostgreSQL if provided, otherwise fallback to local SQLite
@@ -95,6 +105,9 @@ def upload_file():
         file = request.files["file"]
         if file.filename == "":
             return jsonify({"error": "Empty filename"}), 400
+            
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Invalid file type. Allowed extensions: .raw, .mem, .dmp, .img"}), 400
 
         user = db.query(User).filter(User.username == username).first()
         if not user:

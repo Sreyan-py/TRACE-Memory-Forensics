@@ -40,6 +40,12 @@ export default function Analysis() {
       return;
     }
 
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['raw', 'mem', 'dmp', 'img'].includes(ext)) {
+      setMessage("Invalid file type. Allowed extensions: .raw, .mem, .dmp, .img");
+      return;
+    }
+
     setIsLoading(true);
     setScanProgress(0);
     setMessage("");

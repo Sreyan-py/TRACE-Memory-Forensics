@@ -30,7 +30,7 @@ class ThreatDetector:
                     if image_name not in suspicious_processes:
                         suspicious_processes.append(image_name)
                         threat_score += 20
-                        malware_indicators.append("Suspicious PowerShell Execution")
+                        malware_indicators.append("Encoded PowerShell Execution")
                         
         # Parse malfind data
         if malfind_data:
@@ -40,7 +40,7 @@ class ThreatDetector:
                     dll_injections.append(process)
                     threat_score += 25 # DLL injection (+25)
             if dll_injections:
-                malware_indicators.append("Unbacked executable memory regions (Malfind)")
+                malware_indicators.append("Malware Signature Detected (Malfind)")
                 threat_score += 30 # Malware signature (+30)
                 
         # Parse netscan data
@@ -48,7 +48,7 @@ class ThreatDetector:
             for conn in netscan_data:
                 state = conn.get("State", "")
                 foreign_addr = conn.get("ForeignAddr", "")
-                if state == "ESTABLISHED" and foreign_addr not in ["0.0.0.0", "::", "127.0.0.1", "*"]:
+                if state == "ESTABLISHED" and foreign_addr not in ["0.0.0.0", "::", "127.0.0.1", "*", ""]:
                     connection_str = f"{conn.get('LocalAddr', '')}:{conn.get('LocalPort', '')} -> {foreign_addr}:{conn.get('ForeignPort', '')} ({state})"
                     if connection_str not in network_connections:
                         network_connections.append(connection_str)
@@ -57,8 +57,8 @@ class ThreatDetector:
         # Clamp maximum score
         threat_score = min(threat_score, 100)
         
-        # If analysis succeeded but found nothing, return 5
-        if threat_score == 0 and (pslist_data or malfind_data or netscan_data):
+        # If no indicators found, return 5
+        if threat_score == 0:
             threat_score = 5
             
         if threat_score <= 20:
