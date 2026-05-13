@@ -32,10 +32,10 @@ os.makedirs(REPORTS_FOLDER, exist_ok=True)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 # 1GB limit
 
-ALLOWED_EXTENSIONS = {'raw', 'mem', 'dmp', 'img'}
+ALLOWED_EXTENSIONS = {"raw", "mem", "dmp", "img"}
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Centralized DB setup
 # Use PostgreSQL if provided, otherwise fallback to local SQLite
@@ -108,7 +108,12 @@ def upload_file():
         file = request.files["file"]
         if file.filename == "":
             return jsonify({"error": "Empty filename"}), 400
-
+            
+        if not allowed_file(file.filename):
+            return jsonify({"success": False, "error": "Unsupported forensic image format"}), 400
+            
+        if file.mimetype == "application/pdf" or file.filename.lower().endswith('.pdf'):
+             return jsonify({"success": False, "error": "Unsupported forensic image format"}), 400
         user = db.query(User).filter(User.username == username).first()
         if not user:
             return jsonify({"error": "User not found"}), 404
@@ -139,11 +144,12 @@ def upload_file():
                 "network_connections": indicators.get("network_connections", []),
                 "malware_indicators": indicators.get("malware_indicators", []),
                 "forensic_summary": "CACHED ANALYSIS (SHA256 Match): " + indicators.get("forensic_summary", "Analysis loaded from cache."),
-                "plugin_results": json.loads(cached.plugin_results)
+                "plugin_results": json.loads(cached.plugin_results),
+                "analysis_mode": "cached"
             }
         else:
             # 2. Run analysis deterministically
-            analysis_result = analyze_memory(filepath)
+            analysis_result = analyze_memory(filepath, file_hash)
             if "error" in analysis_result:
                 return jsonify({"error": f"Analysis failed: {analysis_result['error']}"}), 400
                 
@@ -168,6 +174,7 @@ def upload_file():
             )
             db.add(new_cache)
             db.commit()
+            analysis_result["analysis_mode"] = "live"
 
         # 4. Generate report
         report_filename = generate_pdf_report(analysis_result, file.filename)
@@ -281,19 +288,16 @@ def signup():
 def login():
     db = SessionLocal()
     try:
-        data = request.json or {}
+        data = request.get_json()
         username = data.get("username")
         password = data.get("password")
         
-        logger.info(f"LOGIN ATTEMPT - Username: {username}")
-        
         user = db.query(User).filter(User.username == username).first()
         if user and check_password_hash(user.password, password):
-            logger.info(f"LOGIN SUCCESS - Username: {username}")
-            return jsonify({"message": "Login successful", "username": username}), 200
-        else:
-            logger.warning(f"LOGIN FAILED - Invalid credentials for {username}")
-            return jsonify({"error": "Invalid username or password"}), 401
+            return jsonify({"message": "Login successful", "username": user.username})
+        
+        logger.warning(f"LOGIN FAILED - Invalid credentials for {username}")
+        return jsonify({"error": "Invalid username or password"}), 401
     except Exception as e:
         logger.error(f"LOGIN ERROR: {str(e)}")
         return jsonify({"error": str(e)}), 500

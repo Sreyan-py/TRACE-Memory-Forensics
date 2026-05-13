@@ -37,34 +37,39 @@ def run_volatility_plugin(filepath, plugin_name):
         logger.error(f"Exception during {plugin_name}: {e}")
         return None
 
-def analyze_memory(filepath):
+def analyze_memory(filepath, file_hash=None):
     """
-    Main entry point for memory analysis.
-    Executes Volatility3 plugins and evaluates threats.
+    Main entry point for hybrid memory analysis.
+    Attempts Volatility3 analysis, fallbacks to deterministic metadata analysis if Volatility fails.
     """
+    is_render = os.environ.get("RENDER") is not None
+    
     try:
         scan_start = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        mode = "volatility"
         
-        pslist_data = run_volatility_plugin(filepath, "windows.pslist.PsList")
-        malfind_data = run_volatility_plugin(filepath, "windows.malfind.Malfind")
-        netscan_data = run_volatility_plugin(filepath, "windows.netscan.NetScan")
+        # On Render free tier, we skip heavy plugins to avoid SIGKILL
+        if is_render:
+            logger.info("Render environment detected. Using lightweight forensic mode.")
+            pslist_data = run_volatility_plugin(filepath, "windows.pslist.PsList")
+            malfind_data = None # Skip malfind on Render (CPU/Mem heavy)
+            netscan_data = None # Skip netscan on Render
+        else:
+            pslist_data = run_volatility_plugin(filepath, "windows.pslist.PsList")
+            malfind_data = run_volatility_plugin(filepath, "windows.malfind.Malfind")
+            netscan_data = run_volatility_plugin(filepath, "windows.netscan.NetScan")
+        
+        detector = ThreatDetector()
         
         if pslist_data is None and malfind_data is None and netscan_data is None:
-            # Fallback for non-memory files (like PDFs) or failed scans
-            # Instead of erroring out, return a clean "Low Threat" result to keep UI stable
-            results = {
-                "threat_score": 5,
-                "severity": "LOW",
-                "suspicious_processes": [],
-                "hidden_processes": [],
-                "dll_injections": [],
-                "network_connections": [],
-                "malware_indicators": [],
-                "registry_anomalies": []
-            }
+            # Fallback for non-memory files (like PDFs), timeouts, or Render SIGKILL protection
+            logger.warning("Volatility analysis failed or was skipped. Using deterministic fallback mode.")
+            mode = "fallback"
+            results = detector.calculate_deterministic_fallback(filepath, file_hash or "unknown")
         else:
-            detector = ThreatDetector()
             results = detector.calculate_threats(pslist_data, malfind_data, netscan_data)
+        
+        results["analysis_mode"] = mode
         
         scan_end = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         

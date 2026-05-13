@@ -34,6 +34,7 @@ export default function Analysis() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const isValidDump = file ? ['raw', 'mem', 'dmp', 'img'].includes(file.name.split('.').pop().toLowerCase()) : false;
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -165,20 +166,36 @@ export default function Analysis() {
                   >
                     Cancel
                   </button>
-                  {file.name.toLowerCase().endsWith('.pdf') && (
-                    <button
-                      onClick={() => window.open(URL.createObjectURL(file))}
-                      className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-cyan-400 border border-cyan-500/50 hover:bg-cyan-500/10 transition"
-                    >
-                      Preview PDF
-                    </button>
+                  {!isValidDump ? (
+                    <div className="flex flex-col gap-3 w-full">
+                      <div className="flex gap-4 w-full">
+                        {file.name.toLowerCase().endsWith('.pdf') && (
+                          <button
+                            onClick={() => window.open(URL.createObjectURL(file))}
+                            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-cyan-400 border border-cyan-500/50 hover:bg-cyan-500/10 transition"
+                          >
+                            Preview PDF
+                          </button>
+                        )}
+                        <button
+                          disabled
+                          className="flex-[2] px-8 py-4 rounded-xl font-bold text-gray-500 bg-gray-800/50 cursor-not-allowed border border-gray-700 opacity-50"
+                        >
+                          Launch Deep Scan
+                        </button>
+                      </div>
+                      <p className="text-red-400 text-xs font-bold uppercase tracking-widest animate-pulse">This file type cannot be analyzed by the forensic engine.</p>
+                    </div>
+                  ) : (
+                    <div className="flex gap-4 w-full">
+                      <button
+                        onClick={handleUpload}
+                        className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-white transition shadow-[0_0_30px_rgba(34,211,238,0.4)] bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500"
+                      >
+                        <Search size={20} /> Launch Deep Scan
+                      </button>
+                    </div>
                   )}
-                  <button
-                    onClick={handleUpload}
-                    className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-white transition shadow-[0_0_30px_rgba(34,211,238,0.4)] bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500"
-                  >
-                    <Search size={20} /> Launch Deep Scan
-                  </button>
                 </div>
               )}
             </div>
@@ -219,6 +236,11 @@ export default function Analysis() {
                 <div className="flex items-center gap-3 mb-2">
                   <Shield className={analysisData.analysis.severity === "CRITICAL" || analysisData.analysis.severity === "HIGH" ? "text-red-500" : "text-green-500"} size={40} />
                   <h2 className="text-4xl font-black text-white tracking-tight">Scan Complete</h2>
+                  {analysisData.analysis.analysis_mode === "fallback" && (
+                    <span className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full animate-pulse">
+                      Fallback Mode Active
+                    </span>
+                  )}
                 </div>
                 <p className="text-gray-400 flex items-center gap-2 mb-6 font-mono text-sm">
                   <CheckCircle size={16} className="text-cyan-400" />
@@ -229,11 +251,18 @@ export default function Analysis() {
                 <div className="bg-black/40 border border-gray-800 rounded-2xl p-5 border-l-4 border-l-cyan-500">
                   <div className="flex items-center gap-2 mb-2">
                     <Zap size={16} className="text-cyan-400"/>
-                    <span className="text-cyan-400 font-bold text-xs uppercase tracking-widest">AI Analyst Summary</span>
+                    <span className="text-cyan-400 font-bold text-xs uppercase tracking-widest">
+                      {analysisData.analysis.analysis_mode === "fallback" ? "Metadata Analysis Summary" : "Volatility AI Summary"}
+                    </span>
                   </div>
                   <p className="text-gray-300 leading-relaxed text-sm">
                     {analysisData.analysis.forensic_summary}
                   </p>
+                  {analysisData.analysis.analysis_mode === "fallback" && (
+                    <p className="text-yellow-400/60 text-[10px] mt-3 font-mono">
+                      * Deep Volatility plugins timed out or were restricted due to server load. Deterministic fallback analysis used.
+                    </p>
+                  )}
                 </div>
               </div>
               
