@@ -32,7 +32,10 @@ os.makedirs(REPORTS_FOLDER, exist_ok=True)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 # 1GB limit
 
-# Removed strict ALLOWED_EXTENSIONS to permit all file types
+ALLOWED_EXTENSIONS = {'raw', 'mem', 'dmp', 'img'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Centralized DB setup
 # Use PostgreSQL if provided, otherwise fallback to local SQLite
@@ -105,6 +108,12 @@ def upload_file():
         file = request.files["file"]
         if file.filename == "":
             return jsonify({"error": "Empty filename"}), 400
+            
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Unsupported memory dump format"}), 400
+            
+        if file.mimetype == "application/pdf":
+            return jsonify({"error": "Unsupported memory dump format"}), 400
 
         user = db.query(User).filter(User.username == username).first()
         if not user:
@@ -115,9 +124,13 @@ def upload_file():
         
         if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
             return jsonify({"error": "Uploaded file is empty or corrupted."}), 400
+            
+        dump_size = os.path.getsize(filepath)
+        if dump_size < 1024 * 1024:
+            os.remove(filepath)
+            return jsonify({"error": "Unsupported memory dump format"}), 400
 
         file_hash = get_file_hash(filepath)
-        dump_size = os.path.getsize(filepath)
 
         # 1. Check cache
         cached = db.query(CachedAnalysis).filter(CachedAnalysis.file_hash == file_hash).first()
