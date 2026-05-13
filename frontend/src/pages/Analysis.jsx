@@ -100,7 +100,11 @@ export default function Analysis() {
 
     } catch (error) {
       clearInterval(progressInterval);
-      setMessage(error.response?.data?.error || "Upload Failed");
+      if (error.message === "Network Error") {
+        setMessage("Network Error: The backend is offline or currently waking up. Please wait 30 seconds and try again.");
+      } else {
+        setMessage(error.response?.data?.error || "Upload Failed");
+      }
       setIsLoading(false);
     }
   };
