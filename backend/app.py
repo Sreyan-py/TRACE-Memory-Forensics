@@ -108,12 +108,6 @@ def upload_file():
         file = request.files["file"]
         if file.filename == "":
             return jsonify({"error": "Empty filename"}), 400
-            
-        if not allowed_file(file.filename):
-            return jsonify({"error": "Unsupported memory dump format"}), 400
-            
-        if file.mimetype == "application/pdf":
-            return jsonify({"error": "Unsupported memory dump format"}), 400
 
         user = db.query(User).filter(User.username == username).first()
         if not user:
@@ -126,9 +120,6 @@ def upload_file():
             return jsonify({"error": "Uploaded file is empty or corrupted."}), 400
             
         dump_size = os.path.getsize(filepath)
-        if dump_size < 1024 * 1024:
-            os.remove(filepath)
-            return jsonify({"error": "Unsupported memory dump format"}), 400
 
         file_hash = get_file_hash(filepath)
 

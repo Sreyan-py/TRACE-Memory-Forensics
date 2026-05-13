@@ -40,11 +40,6 @@ export default function Analysis() {
       return;
     }
 
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (!['raw', 'mem', 'dmp', 'img'].includes(ext)) {
-      setMessage("Invalid memory dump format");
-      return;
-    }
 
 
     setIsLoading(true);
