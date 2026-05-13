@@ -2,8 +2,12 @@ import os
 import hashlib
 import json
 from datetime import datetime
+import logging
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
@@ -231,24 +235,30 @@ def dashboard_stats(username):
 def signup():
     db = SessionLocal()
     try:
-        data = request.json
+        data = request.json or {}
         username = data.get("username")
         password = data.get("password")
         
+        logger.info(f"SIGNUP ATTEMPT - Username: {username}")
+        
         if not username or not password:
+            logger.warning("SIGNUP FAILED - Missing credentials")
             return jsonify({"error": "Username and password required"}), 400
             
         existing_user = db.query(User).filter(User.username == username).first()
         if existing_user:
+            logger.warning(f"SIGNUP FAILED - Username already exists: {username}")
             return jsonify({"error": "Username already exists"}), 400
             
         hashed_password = generate_password_hash(password)
         new_user = User(username=username, password=hashed_password)
         db.add(new_user)
         db.commit()
+        logger.info(f"SIGNUP SUCCESS - User created: {username}")
         return jsonify({"message": "User created successfully"}), 201
     except Exception as e:
         db.rollback()
+        logger.error(f"SIGNUP ERROR: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         db.close()
@@ -257,16 +267,21 @@ def signup():
 def login():
     db = SessionLocal()
     try:
-        data = request.json
+        data = request.json or {}
         username = data.get("username")
         password = data.get("password")
         
+        logger.info(f"LOGIN ATTEMPT - Username: {username}")
+        
         user = db.query(User).filter(User.username == username).first()
         if user and check_password_hash(user.password, password):
+            logger.info(f"LOGIN SUCCESS - Username: {username}")
             return jsonify({"message": "Login successful", "username": username}), 200
         else:
+            logger.warning(f"LOGIN FAILED - Invalid credentials for {username}")
             return jsonify({"error": "Invalid username or password"}), 401
     except Exception as e:
+        logger.error(f"LOGIN ERROR: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         db.close()
