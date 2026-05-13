@@ -58,9 +58,10 @@ export default function Analysis() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("username", localStorage.getItem("trace_user"));
 
     try {
-      const response = await axios.post("https://trace-memory-forensics.onrender.com/upload", formData);
+      const response = await axios.post("http://127.0.0.1:5001/upload", formData);
       clearInterval(progressInterval);
       setScanProgress(100);
       

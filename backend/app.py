@@ -2,7 +2,6 @@ from analysis.volatility_runner import analyze_memory
 from analysis.report_generator import generate_pdf_report
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-# pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import os
@@ -28,6 +27,18 @@ def init_db():
                     username TEXT UNIQUE NOT NULL,
                     password TEXT NOT NULL
                  )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS scans (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    filename TEXT NOT NULL,
+                    threat_score INTEGER NOT NULL,
+                    severity TEXT NOT NULL,
+                    scan_timestamp TEXT NOT NULL,
+                    report_path TEXT NOT NULL,
+                    dump_size INTEGER,
+                    suspicious_process_count INTEGER,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                 )''')
     conn.commit()
     conn.close()
 
@@ -41,39 +52,119 @@ def home():
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
+    try:
+        username = request.form.get("username")
+        if not username:
+            return jsonify({"error": "Username is required"}), 400
 
-    if "file" not in request.files:
+        if "file" not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        file = request.files["file"]
+
+        if file.filename == "":
+            return jsonify({"error": "Empty filename"}), 400
+
+        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(filepath)
+        
+        if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+            return jsonify({"error": "Uploaded file is empty or corrupted."}), 400
+
+        # Get user ID
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT id FROM users WHERE username = ?", (username,))
+        user_row = c.fetchone()
+        if not user_row:
+            conn.close()
+            return jsonify({"error": "User not found"}), 404
+        user_id = user_row[0]
+
+        analysis_result = analyze_memory(filepath)
+
+        if "error" in analysis_result:
+            conn.close()
+            return jsonify({
+                "error": f"Analysis failed: {analysis_result['error']}. Are you sure this is a valid memory dump?"
+            }), 400
+        
+        report_filename = generate_pdf_report(analysis_result, file.filename)
+        report_url = f"http://127.0.0.1:5001/reports/{report_filename}"
+
+        # Insert scan record
+        threat_score = analysis_result.get("threat_score", 0)
+        severity = analysis_result.get("severity", "LOW")
+        scan_timestamp = analysis_result.get("timestamps", {}).get("scan_end", "")
+        suspicious_process_count = len(analysis_result.get("suspicious_processes", []))
+        dump_size = os.path.getsize(filepath)
+
+        c.execute('''INSERT INTO scans 
+                     (user_id, filename, threat_score, severity, scan_timestamp, report_path, dump_size, suspicious_process_count)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
+                  (user_id, file.filename, threat_score, severity, scan_timestamp, report_filename, dump_size, suspicious_process_count))
+        conn.commit()
+        conn.close()
+
         return jsonify({
-            "error": "No file uploaded"
-        }), 400
-
-    file = request.files["file"]
-
-    if file.filename == "":
+            "message": "Analysis Complete",
+            "filename": file.filename,
+            "analysis": analysis_result,
+            "report_url": report_url
+        })
+    except Exception as e:
         return jsonify({
-            "error": "Empty filename"
-        }), 400
+            "error": f"Internal server error during upload processing: {str(e)}"
+        }), 500
 
-    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+@app.route("/dashboard/stats/<username>", methods=["GET"])
+def dashboard_stats(username):
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        c.execute("SELECT id FROM users WHERE username = ?", (username,))
+        user_row = c.fetchone()
+        if not user_row:
+            conn.close()
+            return jsonify({"error": "User not found"}), 404
+        user_id = user_row[0]
+        
+        c.execute("SELECT threat_score, severity, scan_timestamp, suspicious_process_count FROM scans WHERE user_id = ? ORDER BY id ASC", (user_id,))
+        scans = c.fetchall()
+        conn.close()
+        
+        total_dumps = len(scans)
+        critical_threats = sum(1 for s in scans if s[1] in ("CRITICAL", "HIGH"))
+        avg_threat = sum(s[0] for s in scans) / total_dumps if total_dumps > 0 else 0
+        health_score = max(0, int(100 - avg_threat))
+        
+        distribution = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+        for s in scans:
+            if s[1] in distribution:
+                distribution[s[1]] += 1
+                
+        distribution_data = [{"name": k, "value": v} for k, v in distribution.items() if v > 0]
+        if not distribution_data:
+            distribution_data = [{"name": "No Threats", "value": 1}]
+            
+        activity_data = []
+        for i, s in enumerate(scans[-10:]): # Last 10 scans
+            activity_data.append({
+                "name": f"Scan {i+1}",
+                "threats": s[3],
+                "score": s[0]
+            })
 
-    file.save(filepath)
-
-    analysis_result = analyze_memory(filepath)
-
-    if "error" in analysis_result:
         return jsonify({
-            "error": f"Analysis failed: {analysis_result['error']}. Are you sure this is a valid memory dump?"
-        }), 400
-    
-    report_filename = generate_pdf_report(analysis_result, file.filename)
-    report_url = f"https://trace-memory-forensics.onrender.com/reports/{report_filename}"
-
-    return jsonify({
-        "message": "Analysis Complete",
-        "filename": file.filename,
-        "analysis": analysis_result,
-        "report_url": report_url
-    })
+            "total_dumps": total_dumps,
+            "critical_threats": critical_threats,
+            "health_score": f"{health_score}%",
+            "distribution_data": distribution_data,
+            "activity_data": activity_data
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/signup", methods=["POST"])
 def signup():
