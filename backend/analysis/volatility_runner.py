@@ -2,8 +2,10 @@ import subprocess
 import json
 import os
 from datetime import datetime
-import sys
+import logging
 from analysis.threat_detector import ThreatDetector
+
+logger = logging.getLogger(__name__)
 
 def run_volatility_plugin(filepath, plugin_name):
     command = ["vol", "-f", filepath, "-r", "json", plugin_name]
@@ -11,7 +13,7 @@ def run_volatility_plugin(filepath, plugin_name):
         if not os.path.exists(filepath):
             return None
             
-        print(f"Running Volatility3 plugin: {plugin_name}...")
+        logger.info(f"Running Volatility3 plugin: {plugin_name}...")
         result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=300)
         
         try:
@@ -23,16 +25,16 @@ def run_volatility_plugin(filepath, plugin_name):
                     return json.loads(line)
             return []
     except subprocess.CalledProcessError as e:
-        print(f"Error running plugin {plugin_name}: {e.stderr}")
+        logger.error(f"Error running plugin {plugin_name}: {e.stderr}")
         return None
     except FileNotFoundError:
-        print("Volatility 'vol' executable not found. Ensure it is installed and in your PATH.")
+        logger.error("Volatility 'vol' executable not found. Ensure it is installed and in your PATH.")
         return None
     except subprocess.TimeoutExpired:
-        print(f"Plugin {plugin_name} timed out after 300 seconds.")
+        logger.warning(f"Plugin {plugin_name} timed out after 300 seconds.")
         return None
     except Exception as e:
-        print(f"Exception during {plugin_name}: {e}")
+        logger.error(f"Exception during {plugin_name}: {e}")
         return None
 
 def analyze_memory(filepath):
