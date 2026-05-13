@@ -87,6 +87,8 @@ def get_file_hash(filepath):
             sha256.update(chunk)
     return sha256.hexdigest()
 
+from werkzeug.exceptions import RequestEntityTooLarge
+
 @app.route("/")
 def home():
     return {"message": "TRACE Backend Running (Deterministic & Cached)"}

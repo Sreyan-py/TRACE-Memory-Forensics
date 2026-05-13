@@ -155,7 +155,10 @@ export default function Analysis() {
                 <UploadCloud size={48} />
               </div>
               <h3 className="text-3xl font-bold text-white mb-3">Drag & Drop Memory Dump</h3>
-              <p className="text-gray-400 mb-8 max-w-md">Supported formats: .raw, .img, .vmem, .bin. Analysis engine will automatically detect the memory profile.</p>
+              <p className="text-gray-400 mb-2 max-w-md">Supported formats: .raw, .img, .vmem, .bin. Analysis engine will automatically detect the memory profile.</p>
+              <div className="bg-orange-500/10 border border-orange-500/30 text-orange-400 text-sm p-3 rounded-xl mb-8 max-w-md text-center">
+                <span className="font-bold">Note:</span> Cloud deployment supports files up to 200MB. Large memory dumps ({'>'}200MB) must be analyzed using a local TRACE forensic node.
+              </div>
               <button className="bg-white/5 border border-white/10 group-hover:border-cyan-500/50 group-hover:bg-white/10 text-white px-8 py-3 rounded-xl font-bold transition-all">
                 Browse Files
               </button>
