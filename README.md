@@ -1,7 +1,5 @@
 # TRACE - Advanced Memory Forensics & Threat Detection Platform
 
-![TRACE Platform Banner](https://via.placeholder.com/1200x400?text=TRACE+-+Memory+Forensics)
-
 **TRACE** is a professional-grade, AI-assisted memory forensics and incident response platform. It provides deterministic, highly accurate analysis of raw memory dumps to identify zero-day threats, rootkits, fileless malware, and advanced persistent threats (APTs) using **Volatility3**.
 
 ### Deployed URLs
@@ -52,17 +50,6 @@ Powered by `SQLAlchemy`, TRACE features a centralized SQLite (dev) / PostgreSQL 
 - **Infrastructure:** Vercel (Frontend), Render (Backend WSGI)
 
 ---
-
-## 📸 Platform Screenshots
-
-*(Insert screenshots here)*
-- `[Screenshot of Login/Auth]`
-- `[Screenshot of Drag & Drop Upload Zone]`
-- `[Screenshot of Volatility Output Grid]`
-- `[Screenshot of SOC Dashboard Analytics]`
-
----
-
 ## 💻 Setup Instructions
 
 ### Local Development
