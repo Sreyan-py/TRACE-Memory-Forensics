@@ -276,5 +276,4 @@ def download_report(filename):
     return send_from_directory(REPORTS_FOLDER, filename, as_attachment=True)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
-    app.run(host="0.0.0.0", debug=False, port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)))
