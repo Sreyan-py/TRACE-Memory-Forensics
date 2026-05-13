@@ -17,7 +17,8 @@ export default function Auth({ onLogin }) {
     const endpoint = isLogin ? "/login" : "/signup";
     
     try {
-      const response = await axios.post(`https://trace-memory-forensics.onrender.com${endpoint}`, {
+      const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
+      const response = await axios.post(`${API_URL}${endpoint}`, {
         username,
         password
       });

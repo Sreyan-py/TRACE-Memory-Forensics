@@ -19,7 +19,8 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await axios.get(`https://trace-memory-forensics.onrender.com/dashboard/stats/${username}`);
+        const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
+        const response = await axios.get(`${API_URL}/dashboard/stats/${username}`);
         setStatsData(response.data);
       } catch (err) {
         setError("Failed to load dashboard data. Ensure the backend is running.");

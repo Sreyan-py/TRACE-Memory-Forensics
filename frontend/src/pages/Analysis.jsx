@@ -87,7 +87,8 @@ export default function Analysis() {
     formData.append("username", localStorage.getItem("trace_user"));
 
     try {
-      const response = await axios.post("https://trace-memory-forensics.onrender.com/upload", formData);
+      const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
+      const response = await axios.post(`${API_URL}/upload`, formData);
       clearInterval(progressInterval);
       setScanProgress(100);
       
