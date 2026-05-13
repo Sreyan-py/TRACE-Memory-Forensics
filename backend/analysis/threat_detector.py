@@ -1,1 +1,82 @@
-# pyrefly: ignore [missing-import]
+class ThreatDetector:
+    def __init__(self):
+        self.known_bad_processes = {
+            "mimikatz.exe", "nc.exe", "netcat.exe", "psexec.exe"
+        }
+        self.powershell_indicators = ["-enc", "-encodedcommand", "bypass", "hidden"]
+        
+    def calculate_threats(self, pslist_data, malfind_data, netscan_data):
+        threat_score = 0
+        suspicious_processes = []
+        hidden_processes = []
+        dll_injections = []
+        network_connections = []
+        malware_indicators = []
+        
+        # Parse pslist data
+        if pslist_data:
+            for proc in pslist_data:
+                image_name = proc.get("ImageFileName", "")
+                image_name_lower = image_name.lower()
+                
+                # Suspicious processes (+15)
+                if image_name_lower in self.known_bad_processes or "cmd.exe" in image_name_lower:
+                    if image_name not in suspicious_processes:
+                        suspicious_processes.append(image_name)
+                        threat_score += 15
+                        
+                # Encoded powershell activity (+20)
+                if "powershell" in image_name_lower:
+                    if image_name not in suspicious_processes:
+                        suspicious_processes.append(image_name)
+                        threat_score += 20
+                        malware_indicators.append("Suspicious PowerShell Execution")
+                        
+        # Parse malfind data
+        if malfind_data:
+            for entry in malfind_data:
+                process = entry.get("Process", "")
+                if process and process not in dll_injections:
+                    dll_injections.append(process)
+                    threat_score += 25 # DLL injection (+25)
+            if dll_injections:
+                malware_indicators.append("Unbacked executable memory regions (Malfind)")
+                threat_score += 30 # Malware signature (+30)
+                
+        # Parse netscan data
+        if netscan_data:
+            for conn in netscan_data:
+                state = conn.get("State", "")
+                foreign_addr = conn.get("ForeignAddr", "")
+                if state == "ESTABLISHED" and foreign_addr not in ["0.0.0.0", "::", "127.0.0.1", "*"]:
+                    connection_str = f"{conn.get('LocalAddr', '')}:{conn.get('LocalPort', '')} -> {foreign_addr}:{conn.get('ForeignPort', '')} ({state})"
+                    if connection_str not in network_connections:
+                        network_connections.append(connection_str)
+                        threat_score += 10 # Suspicious external connection (+10)
+        
+        # Clamp maximum score
+        threat_score = min(threat_score, 100)
+        
+        # If analysis succeeded but found nothing, return 5
+        if threat_score == 0 and (pslist_data or malfind_data or netscan_data):
+            threat_score = 5
+            
+        if threat_score <= 20:
+            severity = "LOW"
+        elif threat_score <= 50:
+            severity = "MEDIUM"
+        elif threat_score <= 80:
+            severity = "HIGH"
+        else:
+            severity = "CRITICAL"
+            
+        return {
+            "threat_score": threat_score,
+            "severity": severity,
+            "suspicious_processes": list(set(suspicious_processes)),
+            "hidden_processes": list(set(hidden_processes)),
+            "dll_injections": list(set(dll_injections)),
+            "network_connections": list(set(network_connections))[:5],
+            "malware_indicators": list(set(malware_indicators)),
+            "registry_anomalies": []
+        }

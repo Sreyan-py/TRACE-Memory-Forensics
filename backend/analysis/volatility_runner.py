@@ -1,77 +1,84 @@
-import random
-import time
+import subprocess
+import json
+import os
 from datetime import datetime
+import sys
+from analysis.threat_detector import ThreatDetector
+
+def run_volatility_plugin(filepath, plugin_name):
+    command = ["vol", "-f", filepath, "-r", "json", plugin_name]
+    try:
+        if not os.path.exists(filepath):
+            return None
+            
+        print(f"Running Volatility3 plugin: {plugin_name}...")
+        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=300)
+        
+        try:
+            return json.loads(result.stdout)
+        except json.JSONDecodeError:
+            lines = result.stdout.split('\n')
+            for line in lines:
+                if line.strip().startswith('['):
+                    return json.loads(line)
+            return []
+    except subprocess.CalledProcessError as e:
+        print(f"Error running plugin {plugin_name}: {e.stderr}")
+        return None
+    except FileNotFoundError:
+        print("Volatility 'vol' executable not found. Ensure it is installed and in your PATH.")
+        return None
+    except subprocess.TimeoutExpired:
+        print(f"Plugin {plugin_name} timed out after 300 seconds.")
+        return None
+    except Exception as e:
+        print(f"Exception during {plugin_name}: {e}")
+        return None
 
 def analyze_memory(filepath):
-    # Simulate a sophisticated scan delay
-    time.sleep(3.5)
-
-    threat_score = random.randint(40, 100)
-    
-    if threat_score < 60:
-        severity = "LOW"
-    elif threat_score < 80:
-        severity = "MEDIUM"
-    elif threat_score < 90:
-        severity = "HIGH"
-    else:
-        severity = "CRITICAL"
-
-    all_suspicious_procs = ["powershell.exe", "mimikatz.exe", "cmd.exe", "svchost.exe", "lsass.exe", "explorer.exe", "WmiPrvSE.exe"]
-    suspicious_processes = random.sample(all_suspicious_procs, random.randint(1, 4))
-    
-    hidden_processes = []
-    if threat_score > 70:
-        hidden_processes = [f"proc_hidden_{random.randint(100,999)}.exe", "rootkit_core.sys"]
-
-    dll_injections = []
-    if threat_score > 60:
-        dll_injections = ["ntdll_hook.dll", "kernel32_inject.dll", "ws2_32_monitor.dll"]
-        dll_injections = random.sample(dll_injections, random.randint(1, len(dll_injections)))
-
-    network_connections = [
-        "192.168.1.10:49211 -> 45.33.12.90:443 (ESTABLISHED)",
-        "10.0.0.5:50122 -> suspicious-domain.com:80 (SYN_SENT)",
-        "172.16.0.2:135 -> 185.220.101.1:4444 (ESTABLISHED)"
-    ]
-    network_connections = random.sample(network_connections, random.randint(1, 3))
-
-    registry_anomalies = []
-    if threat_score > 50:
-        registry_anomalies = [
-            r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run\MaliciousUpdate",
-            r"HKLM\SYSTEM\CurrentControlSet\Services\HiddenSvc"
-        ]
-
-    malware_indicators = []
-    if severity in ["HIGH", "CRITICAL"]:
-        malware_indicators = ["Reflective DLL Injection detected", "Code cave execution found in lsass.exe", "Unbacked executable memory regions"]
-    elif severity == "MEDIUM":
-        malware_indicators = ["Suspicious parent-child process relationship (cmd.exe spawned by explorer.exe)"]
-    else:
-        malware_indicators = ["Minor anomalies in standard execution flow"]
-
-    if severity == "CRITICAL":
-        forensic_summary = "CRITICAL INCIDENT: The memory dump reveals a highly sophisticated intrusion. Evidence of lateral movement, credential dumping (likely via mimikatz), and active command-and-control beacons were detected. Immediate incident response and network isolation are recommended."
-    elif severity == "HIGH":
-        forensic_summary = "HIGH SEVERITY ALERT: Multiple forensic indicators point to a successful compromise. Suspicious processes are running with elevated privileges, and anomalous network connections to known bad subnets are active."
-    elif severity == "MEDIUM":
-        forensic_summary = "MODERATE THREAT: The system exhibits unusual behavior, including unexpected registry modifications and atypical process execution trees. Further manual investigation is advised."
-    else:
-        forensic_summary = "LOW THREAT: Memory structures appear largely intact. Some minor anomalies were detected, but they do not immediately correlate with known malware profiles. System is likely safe."
-
-    return {
-        "threat_score": threat_score,
-        "severity": severity,
-        "suspicious_processes": suspicious_processes,
-        "hidden_processes": hidden_processes,
-        "dll_injections": dll_injections,
-        "network_connections": network_connections,
-        "registry_anomalies": registry_anomalies,
-        "malware_indicators": malware_indicators,
-        "timestamps": {
-            "scan_start": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "scan_end": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        },
-        "forensic_summary": forensic_summary
-    }
+    """
+    Main entry point for memory analysis.
+    Executes Volatility3 plugins and evaluates threats.
+    """
+    try:
+        scan_start = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        
+        pslist_data = run_volatility_plugin(filepath, "windows.pslist.PsList")
+        malfind_data = run_volatility_plugin(filepath, "windows.malfind.Malfind")
+        netscan_data = run_volatility_plugin(filepath, "windows.netscan.NetScan")
+        
+        if pslist_data is None and malfind_data is None and netscan_data is None:
+            return {"error": "All Volatility plugins failed or timed out. Analysis cannot proceed."}
+            
+        detector = ThreatDetector()
+        results = detector.calculate_threats(pslist_data, malfind_data, netscan_data)
+        
+        scan_end = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        
+        results["timestamps"] = {
+            "scan_start": scan_start,
+            "scan_end": scan_end
+        }
+        
+        # We also want to return plugin results so they can be cached
+        results["plugin_results"] = {
+            "pslist": pslist_data or [],
+            "malfind": malfind_data or [],
+            "netscan": netscan_data or []
+        }
+        
+        severity = results["severity"]
+        if severity == "CRITICAL":
+            forensic_summary = "CRITICAL INCIDENT: Intrusions and active compromises detected. Immediate incident response required."
+        elif severity == "HIGH":
+            forensic_summary = "HIGH SEVERITY ALERT: Multiple forensic indicators point to a successful compromise."
+        elif severity == "MEDIUM":
+            forensic_summary = "MODERATE THREAT: System exhibits unusual behavior, including atypical process execution."
+        else:
+            forensic_summary = "LOW THREAT: Memory structures intact. System is likely safe."
+            
+        results["forensic_summary"] = forensic_summary
+        
+        return results
+    except Exception as e:
+        return {"error": str(e)}
