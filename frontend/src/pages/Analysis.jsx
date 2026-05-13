@@ -11,6 +11,31 @@ export default function Analysis() {
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
+  const getFileTypeLabel = (filename) => {
+    if (!filename) return '';
+    const ext = filename.split('.').pop().toLowerCase();
+    switch (ext) {
+      case 'raw': return 'RAW MEMORY IMAGE';
+      case 'mem': return 'MEMORY DUMP';
+      case 'dmp': return 'MEMORY DUMP';
+      case 'img': return 'DISK/MEMORY IMAGE';
+      case 'pdf': return 'PDF REPORT';
+      case 'txt': return 'TEXT FILE';
+      case 'zip': return 'ARCHIVE';
+      default: return 'UNKNOWN FILE';
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const isValidDump = file ? ['raw', 'mem', 'dmp', 'img'].includes(file.name.split('.').pop().toLowerCase()) : false;
+
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragActive(true);
@@ -109,7 +134,7 @@ export default function Analysis() {
                 <File size={48} />
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">{file.name}</h3>
-              <p className="text-gray-400 font-mono mb-8">{(file.size / (1024 * 1024)).toFixed(2)} MB RAW IMAGE</p>
+              <p className="text-gray-400 font-mono mb-8">{formatFileSize(file.size)} &mdash; <span className="text-cyan-400">{getFileTypeLabel(file.name)}</span></p>
               
               {isLoading ? (
                 <div className="w-full bg-[#0b1020] p-6 rounded-2xl border border-gray-800 shadow-xl">
@@ -136,12 +161,29 @@ export default function Analysis() {
                   >
                     Cancel
                   </button>
-                  <button
-                    onClick={handleUpload}
-                    className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-white transition shadow-[0_0_30px_rgba(34,211,238,0.4)] bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500"
-                  >
-                    <Search size={20} /> Launch Deep Scan
-                  </button>
+                  {file.name.toLowerCase().endsWith('.pdf') && (
+                    <button
+                      onClick={() => window.open(URL.createObjectURL(file))}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-cyan-400 border border-cyan-500/50 hover:bg-cyan-500/10 transition"
+                    >
+                      Preview PDF
+                    </button>
+                  )}
+                  {!isValidDump ? (
+                    <button
+                      disabled
+                      className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-gray-500 bg-gray-800/50 cursor-not-allowed border border-gray-700"
+                    >
+                      Unsupported format
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleUpload}
+                      className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-white transition shadow-[0_0_30px_rgba(34,211,238,0.4)] bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500"
+                    >
+                      <Search size={20} /> Launch Deep Scan
+                    </button>
+                  )}
                 </div>
               )}
             </div>
