@@ -2,7 +2,6 @@
 
 ![TRACE Dashboard](https://raw.githubusercontent.com/Sreyan-py/TRACE-Memory-Forensics/main/screenshots/dashboard_v2.png)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![React](https://img.shields.io/badge/Frontend-React-61DAFB?style=flat&logo=react)](https://reactjs.org/)
 [![Flask](https://img.shields.io/badge/Backend-Flask-000000?style=flat&logo=flask)](https://flask.palletsprojects.com/)
 [![Cybersecurity](https://img.shields.io/badge/Domain-Cybersecurity-red.svg)](https://github.com/Sreyan-py/TRACE-Memory-Forensics)
@@ -131,10 +130,5 @@ TRACE eliminates the "black box" of threat scoring. By utilizing hash-based cach
 - **AI-Assisted Classification**: Neural-link assisted malware family identification.
 - **Collaborative Investigation Rooms**: Multi-analyst real-time forensic collaboration.
 
----
 
-## 📜 License
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
 **TRACE - Stabilizing the future of Digital Forensics.**
