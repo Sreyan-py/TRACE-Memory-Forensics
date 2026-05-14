@@ -22,7 +22,7 @@ def generate_pdf_report(analysis_data, original_filename):
     normal_style = styles['Normal']
     
     # Title
-    story.append(Paragraph("TRACE Advanced Memory Forensics Report", title_style))
+    story.append(Paragraph(f"TRACE: {analysis_data.get('analysis_type', 'Forensic Analysis')} Report", title_style))
     story.append(Spacer(1, 12))
 
     # Basic Info

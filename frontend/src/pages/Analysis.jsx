@@ -20,10 +20,31 @@ export default function Analysis() {
       case 'dmp': return 'MEMORY DUMP';
       case 'img': return 'DISK/MEMORY IMAGE';
       case 'pdf': return 'PDF REPORT';
-      case 'txt': return 'TEXT FILE';
+      case 'docx': return 'OFFICE DOCUMENT';
+      case 'xlsx': return 'SPREADSHEET';
+      case 'pptx': return 'PRESENTATION';
+      case 'txt': return 'TEXT LOG / FILE';
+      case 'exe': return 'EXECUTABLE BINARY';
+      case 'dll': return 'DYNAMIC LINK LIBRARY';
+      case 'js': return 'JAVASCRIPT SOURCE';
+      case 'py': return 'PYTHON SCRIPT';
+      case 'ps1': return 'POWERSHELL SCRIPT';
+      case 'bat': return 'BATCH FILE';
       case 'zip': return 'ARCHIVE';
-      default: return 'UNKNOWN FILE';
+      case 'rar': return 'RAR ARCHIVE';
+      case '7z': return '7Z ARCHIVE';
+      default: return 'UNKNOWN DATA';
     }
+  };
+
+  const getScanMode = (filename) => {
+    if (!filename) return 'Deep Scan';
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['raw', 'mem', 'dmp', 'img'].includes(ext)) return 'Memory Forensics';
+    if (['pdf', 'docx', 'xlsx', 'pptx', 'txt'].includes(ext)) return 'Document Inspection';
+    if (['exe', 'dll'].includes(ext)) return 'Malware Analysis';
+    if (['js', 'py', 'ps1', 'bat'].includes(ext)) return 'Script Security Scan';
+    return 'Threat Intelligence';
   };
 
   const formatFileSize = (bytes) => {
@@ -34,7 +55,12 @@ export default function Analysis() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const isValidDump = file ? ['raw', 'mem', 'dmp', 'img'].includes(file.name.split('.').pop().toLowerCase()) : false;
+  const isValidDump = file ? [
+    'raw', 'mem', 'dmp', 'img',
+    'pdf', 'docx', 'xlsx', 'pptx', 'txt',
+    'exe', 'dll', 'js', 'py', 'ps1', 'bat',
+    'zip', 'rar', '7z'
+  ].includes(file.name.split('.').pop().toLowerCase()) : false;
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -114,7 +140,9 @@ export default function Analysis() {
     <div className="p-10 max-w-6xl mx-auto">
       <header className="mb-10">
         <h1 className="text-4xl font-bold text-white mb-2">Deep Memory Inspection</h1>
-        <p className="text-gray-400">Upload a raw memory dump to identify zero-days, rootkits, and fileless malware via Volatility emulation.</p>
+        <p className="text-gray-400">
+          {file ? `Analyzing ${getFileTypeLabel(file.name)} for hidden threats and malicious indicators.` : "Upload various file formats to identify zero-days, rootkits, and fileless malware via multi-engine emulation."}
+        </p>
       </header>
 
       {/* Upload Zone */}
@@ -192,7 +220,7 @@ export default function Analysis() {
                         onClick={handleUpload}
                         className="flex-[2] flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-white transition shadow-[0_0_30px_rgba(34,211,238,0.4)] bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500"
                       >
-                        <Search size={20} /> Launch Deep Scan
+                        <Search size={20} /> Launch {getScanMode(file.name)}
                       </button>
                     </div>
                   )}

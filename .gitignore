@@ -1,10 +1,38 @@
+# Dependencies
+node_modules/
 venv/
-volatility3/
-samples/
-sample_dumps/
+.env
 __pycache__/
+*.pyc
+
+# Data & Forensics (Sensitive/Large)
+backend/uploads/*
+backend/reports/*
+!backend/uploads/.gitkeep
+!backend/reports/.gitkeep
 *.raw
 *.mem
 *.dmp
-*.7z
-*.zip
+*.bin
+*.vmem
+*.img
+
+# Build
+dist/
+build/
+.vite/
+
+# OS Junk
+.DS_Store
+Thumbs.db
+
+# Database
+backend/users.db
+backend/users.db-journal
+
+# Logs
+logs/
+*.log
+
+# Ignore local scripts if needed
+backend/scripts/insert_mock_cache.py

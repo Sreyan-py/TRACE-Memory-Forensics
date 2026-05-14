@@ -1,113 +1,82 @@
-# TRACE - Advanced Memory Forensics & Threat Detection Platform
+# TRACE: Elite Memory Forensics & Threat Intel Platform
 
-**TRACE** is a professional-grade, AI-assisted memory forensics and incident response platform. It provides deterministic, highly accurate analysis of raw memory dumps to identify zero-day threats, rootkits, fileless malware, and advanced persistent threats (APTs) using **Volatility3**.
+![TRACE Dashboard](https://raw.githubusercontent.com/Sreyan-py/TRACE-Memory-Forensics/main/screenshots/dashboard_v2.png)
 
-### Deployed URLs
-- **Frontend (Vercel):** [https://trace-memory-forensics.vercel.app](https://trace-memory-forensics.vercel.app) *(Update with your actual Vercel URL)*
-- **Backend (Render):** [https://trace-memory-forensics.onrender.com](https://trace-memory-forensics.onrender.com)
+## 🛡️ Project Overview
+TRACE is a next-generation Digital Forensics and Incident Response (DFIR) platform designed for modern Security Operations Centers (SOC). It provides analysts with a high-fidelity interface to analyze memory dumps, track global threat intelligence, and manage malware samples within a unified, cyberpunk-themed workstation.
 
----
+The core of TRACE is its **Deterministic Forensic Engine**, which ensures consistent, auditable results even when processing complex memory artifacts under resource-constrained environments.
 
 ## 🚀 Key Features
+- **Deterministic Forensic Engine**: Consistent SHA256-based analysis for auditable results.
+- **Elite SOC Dashboard**: Real-time telemetry, threat radar, and global pulse visualization.
+- **Deep Analysis Pipeline**: Support for `.raw`, `.mem`, `.dmp`, and `.img` forensic images.
+- **Threat Intelligence**: Integrated MITRE ATT&CK technique mapping and live CVE tracking.
+- **Malware Laboratory**: Static analysis lab with entropy visualization and PE import risk assessment.
+- **Analyst Progression System**: Dynamic rank calculation based on forensic performance.
+- **Automated Reporting**: Generation of professional PDF forensic reports for every scan.
 
-### 1. Deterministic Forensic Engine
-TRACE utilizes a strict, mathematically weighted threat scoring algorithm. By directly parsing the JSON outputs from Volatility3, TRACE evaluates suspicious processes, injected DLLs, and anomalous network connections.
-- **Identical Memory Dumps = Identical Results.** 
-- 100% stable, repeatable, and robust scoring mechanism (clamped at 100).
-- Eradicates "random" or mock threat scoring, making it completely viable for real SOC environments.
+## 🛠️ Tech Stack
+### Frontend
+- **React 19 (Vite)**: High-performance component-based architecture.
+- **Tailwind CSS v4**: Utility-first styling with custom cyber-design tokens.
+- **Lucide React**: Enterprise-grade iconography.
+- **Recharts**: Advanced data visualization for threat telemetry.
 
-### 2. SHA256 Cryptographic Caching
-Memory analysis is extremely computationally expensive. TRACE calculates a `SHA256` hash for every uploaded memory dump. 
-- If an exact memory dump has been previously analyzed, TRACE instantly bypasses the Volatility engine and retrieves the results from the `cached_analysis` database, dropping response times from minutes to milliseconds.
+### Backend
+- **Flask**: Lightweight and modular WSGI application framework.
+- **SQLAlchemy**: Robust ORM for user and forensic data management.
+- **Volatility Integration**: Automated memory forensics (Simulated/Hybrid mode).
+- **ReportLab**: Dynamic PDF generation for forensic documentation.
 
-### 3. Supported File Formats
-TRACE's robust upload pipeline handles large file constraints (up to 1GB) and officially supports:
-- `.raw`
-- `.mem`
-- `.dmp`
-- `.img`
-
-### 4. Real-Time SOC Dashboard
-A sleek, isolated React dashboard built for incident responders.
-- Visualizes threat distributions (CRITICAL, HIGH, MEDIUM, LOW).
-- Tracks individual SOC analyst scan history in real-time.
-- Strict data isolation: Your dashboard explicitly tracks and displays only the forensic scans authorized under your user account.
-
-### 5. Multi-User Authentication & Persistence
-Powered by `SQLAlchemy`, TRACE features a centralized SQLite (dev) / PostgreSQL (production) database.
-- Secures passwords using robust `werkzeug` cryptographic hashing.
-- Safely maintains cross-device user sessions and isolates forensic reports per analyst.
-
----
-
-## 🛠 Tech Stack
-
-- **Frontend:** React, Vite, TailwindCSS, Recharts, Lucide Icons
-- **Backend:** Python, Flask, Gunicorn, SQLAlchemy
-- **Forensic Engine:** Volatility3 (`vol`)
-- **Reporting:** ReportLab (Automated PDF generation)
-- **Database:** PostgreSQL (Production) / SQLite (Local Fallback)
-- **Infrastructure:** Vercel (Frontend), Render (Backend WSGI)
-
----
-## 💻 Setup Instructions
-
-### Local Development
-
-**1. Clone the repository:**
-```bash
-git clone https://github.com/Sreyan-py/TRACE-Memory-Forensics.git
-cd TRACE-Memory-Forensics
+## 📂 Repository Structure
+```text
+TRACE-Memory-Forensics/
+├── frontend/             # React application
+│   ├── src/
+│   │   ├── components/   # UI widgets & layouts
+│   │   ├── pages/        # Main SOC modules
+│   │   └── services/     # API integration
+├── backend/              # Flask API
+│   ├── analysis/         # Forensic engine logic
+│   ├── models/           # DB schemas
+│   ├── routes/           # API blueprints
+│   ├── uploads/          # Artifact quarantine
+│   └── reports/          # Generated documentation
+└── scripts/              # Setup & seeding utilities
 ```
 
-**2. Backend Setup:**
+## ⚙️ Installation & Setup
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- npm or yarn
+
+### 1. Backend Setup
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # (Windows: venv\Scripts\activate)
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+python scripts/seed_db.py # Initialize analyst database
+python app.py
 ```
 
-**3. Volatility3 Installation Requirement:**
-Ensure the `vol` command is globally available in your PATH to allow the backend subprocess calls to execute correctly. 
-- *Note: TRACE gracefully handles plugin crashes and timeouts (300s limit) to prevent total analysis failure.*
-
-**4. Run Local Backend:**
+### 2. Frontend Setup
 ```bash
-gunicorn app:app --bind 0.0.0.0:5001
-```
-
-**5. Frontend Setup:**
-```bash
-cd ../frontend
+cd frontend
 npm install
 npm run dev
 ```
 
-### Production Deployment
+## 🧠 Deterministic Engine Explained
+TRACE uses a hybrid forensic approach. When a memory dump is uploaded, the system calculates a unique SHA256 signature. This signature is used to:
+1. **Cache Lookups**: Instant retrieval of previous analysis for identical artifacts.
+2. **Stable Fallback**: If full Volatility plugin execution fails due to memory limits, the engine generates a high-fidelity deterministic result based on entropy and signature matching, ensuring the analyst always receives actionable data.
 
-**Render (Backend):**
-- Create a new Web Service on Render.
-- Set Root Directory to `backend`.
-- Build Command: `pip install -r requirements.txt`
-- Start Command: `gunicorn app:app`
-- Environment Variables:
-  - `PYTHON_VERSION`: `3.10.x`
-  - `DATABASE_URL`: `postgres://...` (Render Postgres instance)
-  - `SECRET_KEY`: `<your-secure-random-key>`
-
-**Vercel (Frontend):**
-- Import the repository into Vercel.
-- Framework Preset: `Vite`.
-- Root Directory: `frontend`.
-- No additional environment variables required natively.
+## 📜 License
+Professional use only. Designed for educational and cybersecurity portfolio demonstration.
 
 ---
-
-## 👥 Team Credits
-
-- **Sunanda**: CLI integration, Volatility3 architecture, and Plugin configuration.
-- **Sreyan**: Full-stack integration, Deterministic Threat Detection Engine, PostgreSQL/Auth Architecture, and Real-Time Dashboard UI.
-
----
-*Built for Advanced Threat Detection and Memory Forensics.*
+**Developed by [Sreyan-py](https://github.com/Sreyan-py)**

@@ -39,64 +39,88 @@ def run_volatility_plugin(filepath, plugin_name):
 
 def analyze_memory(filepath, file_hash=None):
     """
-    Main entry point for hybrid memory analysis.
-    Attempts Volatility3 analysis, fallbacks to deterministic metadata analysis if Volatility fails.
+    Intelligent analysis router. Detects file type and routes to the correct forensic pipeline.
     """
     is_render = os.environ.get("RENDER") is not None
+    filename = os.path.basename(filepath).lower()
+    ext = filename.split(".")[-1] if "." in filename else ""
+    
+    detector = ThreatDetector()
+    scan_start = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     
     try:
-        scan_start = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        mode = "volatility"
-        
-        # On Render free tier, we skip heavy plugins to avoid SIGKILL
-        if is_render:
-            logger.info("Render environment detected. Using lightweight forensic mode.")
-            pslist_data = run_volatility_plugin(filepath, "windows.pslist.PsList")
-            malfind_data = None # Skip malfind on Render (CPU/Mem heavy)
-            netscan_data = None # Skip netscan on Render
+        # 1. DOCUMENT ANALYSIS (.pdf, .docx, .pptx, .xlsx, .txt)
+        if ext in ["pdf", "docx", "pptx", "xlsx", "txt"]:
+            logger.info(f"Routing to Document Analysis Pipeline: {filename}")
+            results = detector.analyze_document(filepath, file_hash or "unknown")
+            results["analysis_mode"] = "document_inspection"
+
+        # 2. MALWARE ANALYSIS (.exe, .dll)
+        elif ext in ["exe", "dll"]:
+            logger.info(f"Routing to Malware Analysis Pipeline: {filename}")
+            results = detector.analyze_executable(filepath, file_hash or "unknown")
+            results["analysis_mode"] = "malware_analysis"
+
+        # 3. SCRIPT ANALYSIS (.js, .py, .ps1, .bat)
+        elif ext in ["js", "py", "ps1", "bat"]:
+            logger.info(f"Routing to Script Analysis Pipeline: {filename}")
+            results = detector.analyze_script(filepath, file_hash or "unknown")
+            results["analysis_mode"] = "script_security_scan"
+
+        # 4. MEMORY FORENSICS (.raw, .mem, .dmp, .img)
+        elif ext in ["raw", "mem", "dmp", "img"]:
+            logger.info(f"Routing to Volatility Forensic Engine: {filename}")
+            mode = "volatility"
+            
+            # On Render free tier, skip heavy plugins
+            if is_render:
+                logger.info("Render environment detected. Using lightweight forensic mode.")
+                pslist_data = run_volatility_plugin(filepath, "windows.pslist.PsList")
+                malfind_data = None
+                netscan_data = None
+            else:
+                pslist_data = run_volatility_plugin(filepath, "windows.pslist.PsList")
+                malfind_data = run_volatility_plugin(filepath, "windows.malfind.Malfind")
+                netscan_data = run_volatility_plugin(filepath, "windows.netscan.NetScan")
+            
+            if pslist_data is None and malfind_data is None and netscan_data is None:
+                logger.warning("Volatility failed. Falling back to deterministic metadata analysis.")
+                mode = "fallback"
+                results = detector.calculate_deterministic_fallback(filepath, file_hash or "unknown")
+            else:
+                results = detector.calculate_threats(pslist_data, malfind_data, netscan_data)
+            
+            results["analysis_mode"] = mode
+            results["analysis_type"] = "Memory Forensics"
+
+        # 5. DEFAULT FALLBACK
         else:
-            pslist_data = run_volatility_plugin(filepath, "windows.pslist.PsList")
-            malfind_data = run_volatility_plugin(filepath, "windows.malfind.Malfind")
-            netscan_data = run_volatility_plugin(filepath, "windows.netscan.NetScan")
-        
-        detector = ThreatDetector()
-        
-        if pslist_data is None and malfind_data is None and netscan_data is None:
-            # Fallback for non-memory files (like PDFs), timeouts, or Render SIGKILL protection
-            logger.warning("Volatility analysis failed or was skipped. Using deterministic fallback mode.")
-            mode = "fallback"
+            logger.info(f"Unknown file type {ext}. Using general deterministic analysis.")
             results = detector.calculate_deterministic_fallback(filepath, file_hash or "unknown")
-        else:
-            results = detector.calculate_threats(pslist_data, malfind_data, netscan_data)
-        
-        results["analysis_mode"] = mode
-        
+            results["analysis_mode"] = "general_analysis"
+            results["analysis_type"] = "Threat Intelligence"
+
         scan_end = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        
         results["timestamps"] = {
             "scan_start": scan_start,
             "scan_end": scan_end
         }
         
-        # We also want to return plugin results so they can be cached
-        results["plugin_results"] = {
-            "pslist": pslist_data or [],
-            "malfind": malfind_data or [],
-            "netscan": netscan_data or []
-        }
-        
-        severity = results["severity"]
-        if severity == "CRITICAL":
-            forensic_summary = "CRITICAL INCIDENT: Intrusions and active compromises detected. Immediate incident response required."
-        elif severity == "HIGH":
-            forensic_summary = "HIGH SEVERITY ALERT: Multiple forensic indicators point to a successful compromise."
-        elif severity == "MEDIUM":
-            forensic_summary = "MODERATE THREAT: System exhibits unusual behavior, including atypical process execution."
-        else:
-            forensic_summary = "LOW THREAT: Memory structures intact. System is likely safe."
-            
-        results["forensic_summary"] = forensic_summary
-        
+        # Apply forensic summary based on severity if not already set
+        if "forensic_summary" not in results:
+            severity = results["severity"]
+            if severity == "CRITICAL":
+                summary = f"CRITICAL: High-risk indicators found in {filename}. Active threat detected."
+            elif severity == "HIGH":
+                summary = f"HIGH: Suspicious patterns detected in {filename}. High probability of malicious intent."
+            elif severity == "MEDIUM":
+                summary = f"MEDIUM: Anomalous data identified in {filename}. Recommended for manual review."
+            else:
+                summary = f"LOW: No significant threats found in {filename}. File appears safe."
+            results["forensic_summary"] = summary
+
         return results
+        
     except Exception as e:
+        logger.error(f"Analysis Pipeline Error: {str(e)}")
         return {"error": str(e)}
