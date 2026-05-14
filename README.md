@@ -124,23 +124,6 @@ TRACE eliminates the "black box" of threat scoring. By utilizing hash-based cach
 - **Efficiency**: Instant results for previously analyzed artifacts.
 - **Auditability**: Clear mapping between artifact signatures and threat scores.
 
----
-
-## 🖼️ Screenshots
-
-### **Analyst Terminal (Dashboard)**
-![Dashboard](file:///Users/sreyan/Desktop/Projects/TRACE-Memory-Forensics/screenshots/dashboard_v2.png)
-
-### **Threat Intelligence Center**
-![Threat Intel](https://raw.githubusercontent.com/Sreyan-py/TRACE-Memory-Forensics/main/screenshots/intel_preview.png)
-
-### **Malware Analysis Lab**
-![Malware Lab](https://raw.githubusercontent.com/Sreyan-py/TRACE-Memory-Forensics/main/screenshots/lab_preview.png)
-
-### **Analyst Dossier (Profile)**
-![Profile](https://raw.githubusercontent.com/Sreyan-py/TRACE-Memory-Forensics/main/screenshots/profile_preview.png)
-
----
 
 ## 🔮 Future Improvements
 - **Live SIEM Integration**: Direct ingestion from Splunk and ELK stacks.
