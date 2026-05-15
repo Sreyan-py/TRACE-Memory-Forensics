@@ -1,6 +1,6 @@
 # TRACE – Memory Forensics & Threat Intelligence Platform
 
-![TRACE Dashboard](screenshots/dashboard_v2.png)
+
 
 [![React](https://img.shields.io/badge/Frontend-React-61DAFB?style=flat&logo=react)](https://reactjs.org/)
 [![Flask](https://img.shields.io/badge/Backend-Flask-000000?style=flat&logo=flask)](https://flask.palletsprojects.com/)
