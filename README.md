@@ -115,6 +115,33 @@ npm install
 npm run dev
 ```
 
+## 🚀 Deployment Guide
+
+### 1. Backend (Render)
+- **Repo**: Connect your GitHub repository to Render.
+- **Service Type**: Select `Web Service`.
+- **Build Command**: `pip install -r backend/requirements.txt`
+- **Start Command**: `gunicorn backend.app:app` (Note: adjust path if your root is different).
+- **Environment Variables**:
+  - `PORT`: `5001`
+  - `FLASK_ENV`: `production`
+  - `DATABASE_URL`: `postgresql://...` (from Render External DB)
+  - `SECRET_KEY`: Your secure key.
+
+### 2. Frontend (Vercel)
+- **Repo**: Connect your GitHub repository to Vercel.
+- **Framework Preset**: `Vite`.
+- **Root Directory**: `frontend`.
+- **Environment Variables**:
+  - `VITE_API_URL`: Your Render backend URL (e.g., `https://trace-api.onrender.com`).
+
+### 3. Database Migration (PostgreSQL)
+If deploying to Render, the local SQLite database will reset on every deploy. It is recommended to use Render's managed PostgreSQL:
+1. Create a **Render PostgreSQL** instance.
+2. Copy the **Internal Database URL**.
+3. Add it to your Backend Environment Variables as `DATABASE_URL`.
+4. TRACE will automatically migrate your schema upon the next startup.
+
 ---
 
 ## 🔬 Deterministic Engine

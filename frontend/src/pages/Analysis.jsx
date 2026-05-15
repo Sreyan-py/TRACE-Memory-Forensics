@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import axios from "axios";
+import { forensicsApi } from "../services/api";
 import { UploadCloud, File, AlertTriangle, Activity, Download, CheckCircle, Shield, Loader2, EyeOff, Code, Database, Network, Search, Zap } from "lucide-react";
 
 export default function Analysis() {
@@ -114,24 +114,19 @@ export default function Analysis() {
     formData.append("username", localStorage.getItem("trace_user"));
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
-      const response = await axios.post(`${API_URL}/upload`, formData);
+      const response = await forensicsApi.upload(formData);
       clearInterval(progressInterval);
       setScanProgress(100);
       
       setTimeout(() => {
-        setMessage(response.data.message);
-        setAnalysisData(response.data);
+        setMessage(response.message);
+        setAnalysisData(response);
         setIsLoading(false);
       }, 800);
 
     } catch (error) {
       clearInterval(progressInterval);
-      if (error.message === "Network Error") {
-        setMessage("Network Error: The backend is offline or currently waking up. Please wait 30 seconds and try again.");
-      } else {
-        setMessage(error.response?.data?.error || "Upload Failed");
-      }
+      setMessage(error.message || "Analysis Pipeline Failure");
       setIsLoading(false);
     }
   };

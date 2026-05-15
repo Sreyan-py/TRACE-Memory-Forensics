@@ -9,9 +9,9 @@ def get_intel_aggregate(username):
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
-        if not user: return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"success": False, "error": "User not found"}), 404
         
-        return jsonify({
+        intel_data = {
             "trending_cves": [
                 {"id": "CVE-2024-38063", "title": "Windows TCP/IP RCE", "severity": "CRITICAL", "score": "9.8"},
                 {"id": "CVE-2024-38077", "title": "Windows RDP RCE", "severity": "CRITICAL", "score": "9.8"}
@@ -26,6 +26,9 @@ def get_intel_aggregate(username):
                 "powershell.exe -enc ...",
                 f"sample_{user.id}_hash.exe"
             ]
-        })
+        }
+        return jsonify({"success": True, "data": intel_data})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         db.close()

@@ -9,7 +9,7 @@ def dashboard_stats(username):
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
-        if not user: return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"success": False, "error": "User not found"}), 404
             
         scans = db.query(Scan).filter(Scan.user_id == user.id).all()
         total_dumps = len(scans)
@@ -28,13 +28,17 @@ def dashboard_stats(username):
                 "value": s.threat_score
             })
 
-        return jsonify({
+        stats = {
             "total_dumps": total_dumps,
             "critical_threats": critical_threats,
             "health_score": health_score,
             "distribution_data": [{"name": k, "value": v} for k, v in distribution.items() if v > 0],
             "activity_data": activity_data
-        })
+        }
+        
+        return jsonify({"success": True, "data": stats})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         db.close()
 
@@ -43,13 +47,17 @@ def get_activities(username):
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
-        if not user: return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"success": False, "error": "User not found"}), 404
         
         logs = db.query(ActivityLog).filter(ActivityLog.user_id == user.id).order_by(ActivityLog.id.desc()).limit(10).all()
-        return jsonify([{
+        activity_list = [{
             "time": l.timestamp,
             "msg": l.message,
             "type": l.event_type
-        } for l in logs])
+        } for l in logs]
+        
+        return jsonify({"success": True, "data": activity_list})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         db.close()

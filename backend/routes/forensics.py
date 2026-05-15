@@ -35,10 +35,10 @@ def upload_file():
         file = request.files.get("file")
         
         if not username or not file:
-            return jsonify({"error": "Username and file required"}), 400
+            return jsonify({"success": False, "error": "Username and file required"}), 400
 
         user = db.query(User).filter(User.username == username).first()
-        if not user: return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"success": False, "error": "User not found"}), 404
 
         upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
         file.save(upload_path)
@@ -60,7 +60,7 @@ def upload_file():
         else:
             analysis_result = analyze_memory(upload_path, file_hash)
             if "error" in analysis_result:
-                return jsonify({"error": analysis_result["error"]}), 400
+                return jsonify({"success": False, "error": analysis_result["error"]}), 400
                 
             new_cache = CachedAnalysis(
                 file_hash=file_hash,
@@ -99,10 +99,13 @@ def upload_file():
         db.commit()
 
         return jsonify({
+            "success": True,
             "message": "Analysis Complete",
             "analysis": analysis_result,
             "report_url": f"{request.host_url.rstrip('/')}/reports/{report_filename}"
         })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         db.close()
 
@@ -111,16 +114,20 @@ def get_history(username):
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
-        if not user: return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"success": False, "error": "User not found"}), 404
         
         scans = db.query(Scan).filter(Scan.user_id == user.id).order_by(Scan.id.desc()).all()
-        return jsonify([{
+        history = [{
             "id": f"TRC-{s.id:03d}",
             "name": s.filename,
             "date": s.scan_timestamp,
             "score": s.threat_score,
             "severity": s.severity,
             "report_url": f"{request.host_url.rstrip('/')}/reports/{s.report_path}"
-        } for s in scans])
+        } for s in scans]
+        
+        return jsonify({"success": True, "data": history})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         db.close()

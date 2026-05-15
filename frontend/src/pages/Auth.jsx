@@ -1,6 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
-import { Shield, Lock, User, KeyRound, AlertTriangle, ArrowRight, Eye, EyeOff, Check, X, ShieldCheck, ShieldAlert, ChevronRight } from "lucide-react";
+import { Shield, Lock, User, AlertTriangle, ArrowRight, Eye, EyeOff, Check, X } from "lucide-react";
+import { authApi } from "../services/api";
 
 export default function Auth({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,21 +23,26 @@ export default function Auth({ onLogin }) {
     setIsLoading(true);
     setError("");
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
-      const endpoint = isLogin ? "/login" : "/signup";
-      
-      const res = await axios.post(`${API_URL}${endpoint}`, formData);
-      
       if (isLogin) {
-        setIsMFA(true);
-        setIsLoading(false);
+        const res = await authApi.login(formData);
+        if (res.success) {
+          setIsMFA(true);
+        } else {
+          setError(res.error || "Authentication failure");
+        }
       } else {
-        setIsLogin(true);
-        setIsLoading(false);
-        setFormData({ username: "", password: "" });
+        const res = await authApi.signup(formData);
+        if (res.success) {
+          setIsLogin(true);
+          setFormData({ ...formData, password: "" });
+          // Optional: Show success toast
+        } else {
+          setError(res.error || "Registration failure");
+        }
       }
     } catch (err) {
-      setError(err.response?.data?.error || "Neural link failure");
+      setError(err.message || "Neural link failure");
+    } finally {
       setIsLoading(false);
     }
   };

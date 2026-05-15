@@ -1,6 +1,6 @@
 import { User, Shield, Target, Activity, Database, Globe, Calendar, Award, Zap, Edit3, Save, MapPin, Briefcase, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { profileApi } from "../services/api";
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -12,10 +12,11 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
-        const res = await axios.get(`${API_URL}/profile/${username}`);
-        setProfile(res.data);
-        setFormData(res.data);
+        const res = await profileApi.getProfile(username);
+        if (res.success) {
+          setProfile(res.data);
+          setFormData(res.data);
+        }
       } catch (err) {
         console.error("Failed to fetch profile");
       } finally {
@@ -27,12 +28,11 @@ export default function Profile() {
 
   const handleUpdate = async () => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
-      await axios.post(`${API_URL}/profile/update`, { ...formData, username });
+      await profileApi.updateProfile({ ...formData, username });
       setProfile(formData);
       setIsEditing(false);
     } catch (err) {
-      alert("Failed to synchronize profile data.");
+      alert(err.message || "Failed to synchronize profile data.");
     }
   };
 

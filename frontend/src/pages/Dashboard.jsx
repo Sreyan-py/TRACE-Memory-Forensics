@@ -7,6 +7,8 @@ import {
   BarChart, Bar, Cell
 } from "recharts";
 
+import { dashboardApi } from "../services/api";
+
 export default function Dashboard() {
   const [statsData, setStatsData] = useState(null);
   const [activities, setActivities] = useState([]);
@@ -17,15 +19,14 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
         const [statsRes, activityRes] = await Promise.all([
-          axios.get(`${API_URL}/dashboard/stats/${username}`),
-          axios.get(`${API_URL}/activities/${username}`)
+          dashboardApi.getStats(username),
+          dashboardApi.getActivities(username)
         ]);
-        setStatsData(statsRes.data);
-        setActivities(activityRes.data);
+        if (statsRes.success) setStatsData(statsRes.data);
+        if (activityRes.success) setActivities(activityRes.data);
       } catch (err) {
-        setError("Failed to synchronize with SOC telemetry feed.");
+        setError(err.message || "Failed to synchronize with SOC telemetry feed.");
       } finally {
         setIsLoading(false);
       }

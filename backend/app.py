@@ -1,6 +1,10 @@
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv()
 from database import engine, Base
 from routes.auth import auth_bp
 from routes.profile import profile_bp
@@ -10,7 +14,19 @@ from routes.intel import intel_bp
 from routes.lab import lab_bp
 
 app = Flask(__name__)
-CORS(app)
+
+# Strict CORS for production security
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://trace-memory-forensics.vercel.app",
+            "http://localhost:5173",
+            "http://localhost:5174"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Configurations
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -38,8 +54,14 @@ def download_report(filename):
     return send_from_directory(app.config['REPORTS_FOLDER'], filename, as_attachment=True)
 
 @app.route("/")
+@app.route("/health")
 def health_check():
-    return {"status": "operational", "engine": "TRACE-Deterministic-V2"}
+    return jsonify({
+        "success": True,
+        "status": "operational", 
+        "engine": "TRACE-Deterministic-V2",
+        "environment": os.environ.get("FLASK_ENV", "production")
+    })
 
 # Initialize DB
 Base.metadata.create_all(bind=engine)

@@ -10,12 +10,12 @@ def get_profile(username):
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
-        if not user: return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"success": False, "error": "User not found"}), 404
         
         total_scans = db.query(Scan).filter(Scan.user_id == user.id).count()
         critical_threats = db.query(Scan).filter(Scan.user_id == user.id, Scan.severity.in_(["CRITICAL", "HIGH"])).count()
         
-        return jsonify({
+        profile_data = {
             "username": user.username,
             "display_name": user.display_name or user.username,
             "codename": user.codename or f"AGENT-{user.id:04d}",
@@ -33,7 +33,10 @@ def get_profile(username):
                 "ioc_count": total_scans * 12,
                 "data_analyzed": round(total_scans * 1.2, 1)
             }
-        })
+        }
+        return jsonify({"success": True, "data": profile_data})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         db.close()
 
@@ -44,7 +47,7 @@ def update_profile():
         data = request.json
         username = data.get("username")
         user = db.query(User).filter(User.username == username).first()
-        if not user: return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"success": False, "error": "User not found"}), 404
         
         user.display_name = data.get("display_name", user.display_name)
         user.codename = data.get("codename", user.codename)
@@ -55,6 +58,8 @@ def update_profile():
         user.avatar_preset = data.get("avatar_preset", user.avatar_preset)
         
         db.commit()
-        return jsonify({"message": "Profile updated successfully"})
+        return jsonify({"success": True, "message": "Identity dossier synchronized successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         db.close()

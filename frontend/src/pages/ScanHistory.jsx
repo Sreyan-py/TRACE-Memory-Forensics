@@ -1,5 +1,6 @@
 import { History, Search, Filter, Download, Shield, Clock, FileText, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { forensicsApi } from "../services/api";
 
 export default function ScanHistory() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -10,9 +11,8 @@ export default function ScanHistory() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || "https://trace-memory-forensics.onrender.com";
-        const res = await axios.get(`${API_URL}/history/${username}`);
-        setHistory(res.data);
+        const res = await forensicsApi.getHistory(username);
+        if (res.success) setHistory(res.data);
       } catch (err) {
         console.error("Failed to load history");
       } finally {
