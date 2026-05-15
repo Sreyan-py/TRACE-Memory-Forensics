@@ -36,3 +36,12 @@ logs/
 
 # Ignore local scripts if needed
 backend/scripts/insert_mock_cache.py
+
+# Volatility Framework
+volatility3/
+
+# Local Samples
+samples/
+
+# Generated Reports
+report_*.json
