@@ -36,9 +36,13 @@ logs/
 
 # Ignore local scripts if needed
 backend/scripts/insert_mock_cache.py
+<<<<<<< HEAD
 
 # Local Samples
 samples/
 
 # Generated Reports
 report_*.json
+=======
+users.db
+>>>>>>> eadfdd8 (Integrated user-specific scan history module into TRACE)

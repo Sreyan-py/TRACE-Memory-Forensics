@@ -128,11 +128,11 @@ class ThreatDetector:
         if threat_score == 0:
             threat_score = 5
             
-        if threat_score <= 20:
+        if threat_score <= 25:
             severity = "LOW"
         elif threat_score <= 50:
             severity = "MEDIUM"
-        elif threat_score <= 80:
+        elif threat_score <= 75:
             severity = "HIGH"
         else:
             severity = "CRITICAL"
