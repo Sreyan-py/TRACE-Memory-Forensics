@@ -80,12 +80,19 @@ def upload_file():
 
         report_filename = generate_pdf_report(analysis_result, file.filename)
         
+        # Determine file type from extension
+        ext = os.path.splitext(file.filename)[1].lower().lstrip('.')
+        file_type_map = {'raw': 'RAW', 'vmem': 'VMEM', 'img': 'IMG', 'bin': 'BIN', 'dmp': 'DMP', 'mem': 'MEM'}
+        file_type = file_type_map.get(ext, ext.upper() if ext else 'RAW')
+
         scan = Scan(
             user_id=user.id,
             filename=file.filename,
             file_hash=file_hash,
+            file_type=file_type,
             threat_score=analysis_result["threat_score"],
             severity=analysis_result["severity"],
+            forensic_summary=analysis_result.get("forensic_summary", ""),
             scan_timestamp=analysis_result["timestamps"]["scan_end"],
             report_path=report_filename,
             dump_size=os.path.getsize(upload_path),
@@ -118,11 +125,16 @@ def get_history(username):
         
         scans = db.query(Scan).filter(Scan.user_id == user.id).order_by(Scan.id.desc()).all()
         history = [{
+            "scan_id": s.id,
             "id": f"TRC-{s.id:03d}",
             "name": s.filename,
+            "file_type": getattr(s, 'file_type', 'RAW') or 'RAW',
             "date": s.scan_timestamp,
             "score": s.threat_score,
             "severity": s.severity,
+            "forensic_summary": getattr(s, 'forensic_summary', '') or '',
+            "size": f"{(s.dump_size or 0) / (1024*1024):.2f} MB",
+            "suspicious_process_count": s.suspicious_process_count or 0,
             "report_url": f"{request.host_url.rstrip('/')}/reports/{s.report_path}"
         } for s in scans]
         

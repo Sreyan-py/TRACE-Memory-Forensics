@@ -7,6 +7,7 @@ import Analysis from "./pages/Analysis";
 import Profile from "./pages/Profile";
 import ThreatIntel from "./pages/ThreatIntel";
 import MalwareLab from "./pages/MalwareLab";
+import ScanHistory from "./pages/ScanHistory";
 import Auth from "./pages/Auth";
 
 const Placeholder = ({ title }) => (
@@ -43,7 +44,7 @@ function App() {
           <Route path="profile" element={<Profile user={user} />} />
           <Route path="intel" element={<ThreatIntel />} />
           <Route path="lab" element={<MalwareLab />} />
-          <Route path="history" element={<Placeholder title="Scan History" />} />
+          <Route path="history" element={<ScanHistory />} />
           <Route path="monitoring" element={<Placeholder title="Live Monitoring" />} />
           <Route path="ioc" element={<Placeholder title="IOC Explorer" />} />
           <Route path="reports" element={<Placeholder title="Threat Reports" />} />
