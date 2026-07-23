@@ -1,9 +1,7 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from datetime import datetime
-
-Base = declarative_base()
+from database import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -61,6 +59,3 @@ class CachedAnalysis(Base):
     plugin_results = Column(Text, nullable=False) # JSON encoded string
     timestamp = Column(String(50), nullable=False)
 
-# Database Engine
-engine = create_engine("sqlite:///users.db")
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -66,3 +66,18 @@ def login():
         return jsonify({"success": False, "error": "Authentication server timeout"}), 500
     finally:
         db.close()
+
+@auth_bp.route("/debug/users", methods=["GET"])
+def debug_users():
+    db = SessionLocal()
+    try:
+        users = db.query(User).all()
+        return jsonify({
+            "success": True,
+            "users": [{"id": u.id, "username": u.username} for u in users]
+        })
+    except Exception as e:
+        logger.error(f"DEBUG_USERS_ERROR: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        db.close()

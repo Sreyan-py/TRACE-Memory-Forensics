@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env
 load_dotenv()
 from database import engine, Base
+import models.models  # noqa: F401 — ensures all ORM models are registered before table creation
 from routes.auth import auth_bp
 from routes.profile import profile_bp
 from routes.forensics import forensics_bp
