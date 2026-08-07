@@ -2,6 +2,7 @@ import os
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+from migrate_db import migrate
 
 # Load environment variables from .env
 load_dotenv()
@@ -65,6 +66,7 @@ def health_check():
     })
 
 # Initialize DB
+migrate()
 Base.metadata.create_all(bind=engine)
 
 if __name__ == "__main__":
