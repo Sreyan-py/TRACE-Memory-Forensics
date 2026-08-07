@@ -60,7 +60,7 @@ def health_check():
     return jsonify({
         "success": True,
         "status": "operational", 
-        "engine": "TRACE-Deterministic-V2",
+        "engine": "TRACE-Volatility-V3",
         "environment": os.environ.get("FLASK_ENV", "production")
     })
 

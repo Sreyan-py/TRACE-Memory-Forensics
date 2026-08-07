@@ -1,13 +1,13 @@
 import { User, Shield, Target, Activity, Database, Globe, Calendar, Award, Zap, Edit3, Save, MapPin, Briefcase, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
-import { profileApi } from "../services/api";
+import { profileApi, getStoredUsername } from "../services/api";
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const username = localStorage.getItem("trace_user");
+  const username = getStoredUsername();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -18,7 +18,7 @@ export default function Profile() {
           setFormData(res.data);
         }
       } catch (err) {
-        console.error("Failed to fetch profile");
+        // Handle failure silently
       } finally {
         setIsLoading(false);
       }

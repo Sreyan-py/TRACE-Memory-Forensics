@@ -1,20 +1,19 @@
 import { Activity, HardDrive, ShieldAlert, Cpu, Zap, Search, Clock, Target, Database, Globe, ArrowUpRight, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar, Cell
 } from "recharts";
 
-import { dashboardApi } from "../services/api";
+import { dashboardApi, getStoredUsername } from "../services/api";
 
 export default function Dashboard() {
   const [statsData, setStatsData] = useState(null);
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const username = localStorage.getItem("trace_user");
+  const username = getStoredUsername();
 
   useEffect(() => {
     const fetchData = async () => {

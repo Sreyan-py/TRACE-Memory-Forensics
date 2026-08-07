@@ -1,6 +1,6 @@
 import { History, Search, Download, Shield, Clock, FileText, AlertTriangle, ChevronDown, ChevronUp, Calendar, Activity, Crosshair, File } from "lucide-react";
 import { useState, useEffect } from "react";
-import { forensicsApi } from "../services/api";
+import { forensicsApi, getStoredUsername } from "../services/api";
 
 const FILTERS = [
   { label: "All Scans", value: "all" },
@@ -37,7 +37,7 @@ export default function ScanHistory() {
   const [isLoading, setIsLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
-  const username = localStorage.getItem("trace_user");
+  const username = getStoredUsername();
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -45,7 +45,7 @@ export default function ScanHistory() {
         const res = await forensicsApi.getHistory(username);
         if (res.success) setHistory(res.data);
       } catch (err) {
-        console.error("Failed to load history");
+        // History load failed — silently handle, user will see empty state
       } finally {
         setIsLoading(false);
       }
