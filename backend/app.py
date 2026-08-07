@@ -66,7 +66,16 @@ def health_check():
     })
 
 # Initialize DB
+
 migrate()
+
+print("=" * 60)
+print("TABLES FOUND:", Base.metadata.tables.keys())
+print("USER COLUMNS:")
+for col in Base.metadata.tables["users"].columns:
+    print("-", col.name)
+print("=" * 60)
+
 Base.metadata.create_all(bind=engine)
 
 if __name__ == "__main__":
