@@ -84,13 +84,7 @@ apiClient.interceptors.response.use(
     if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
       return Promise.reject({
         ...error,
-        message:
-          "Analysis could not be completed.\n\nPossible reasons:\n" +
-          "• Unsupported memory image\n" +
-          "• Corrupted memory dump\n" +
-          "• Missing Volatility symbols\n" +
-          "• Analysis timed out\n\n" +
-          "Please upload another supported memory image.",
+        message: "Request timed out. Please check network connectivity or server status.",
       });
     }
     const message =
@@ -123,11 +117,28 @@ export const authApi = {
 // Forensics API — 10-minute timeout for Volatility
 // ─────────────────────────────────────────────────────────────────────────────
 export const forensicsApi = {
-  upload: (formData) =>
-    apiClient.post("/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-      timeout: 600000, // 10 minutes
-    }),
+  upload: async (formData) => {
+    try {
+      return await apiClient.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 600000, // 10 minutes
+      });
+    } catch (err) {
+      if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
+        throw {
+          ...err,
+          message:
+            "Analysis could not be completed.\n\nPossible reasons:\n" +
+            "• Unsupported memory image\n" +
+            "• Corrupted memory dump\n" +
+            "• Missing Volatility symbols\n" +
+            "• Analysis timed out\n\n" +
+            "Please upload another supported memory image.",
+        };
+      }
+      throw err;
+    }
+  },
   getHistory: (username) => apiClient.get(`/history/${username}`),
 };
 

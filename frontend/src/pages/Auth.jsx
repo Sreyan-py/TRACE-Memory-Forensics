@@ -25,13 +25,30 @@ function allCriteriaMet(criteria) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared UI primitives
 // ─────────────────────────────────────────────────────────────────────────────
+function sanitizeAuthError(msg, defaultMsg = "Authentication failure. Please try again.") {
+  if (!msg) return "";
+  const lower = String(msg).toLowerCase();
+  if (
+    lower.includes("analysis") ||
+    lower.includes("volatility") ||
+    lower.includes("memory image") ||
+    lower.includes("memory dump") ||
+    lower.includes("symbols") ||
+    lower.includes("unsupported")
+  ) {
+    return defaultMsg;
+  }
+  return msg;
+}
+
 function ErrorBox({ message }) {
   if (!message) return null;
+  const safeMsg = sanitizeAuthError(message, "Authentication failure. Please try again.");
   return (
     <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-start gap-3">
       <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
       <span className="text-[10px] text-red-400 font-black uppercase tracking-widest leading-snug whitespace-pre-line">
-        {message}
+        {safeMsg}
       </span>
     </div>
   );
@@ -423,6 +440,7 @@ export default function Auth({ onLogin }) {
   const isLogin = view === "login";
   const isMFA   = view === "mfa";
   const isForgot = view === "forgot";
+  const isRegisteredSuccess = view === "registered_success";
 
   const pwCriteria = getPasswordCriteria(formData.password);
 
@@ -444,23 +462,27 @@ export default function Auth({ onLogin }) {
           setPendingLoginData({ username: res.username, token: res.token });
           setView("mfa");
         } else {
-          setError(res.error || "Invalid Analyst ID or Access Key.");
+          const rawErr = res.error || "Invalid Analyst ID or Access Key.";
+          setError(sanitizeAuthError(rawErr, "Invalid Analyst ID or Access Key."));
         }
       } else {
         // Register
         const res = await authApi.signup(formData);
         if (res.success) {
-          setView("login");
-          setFormData({ username: formData.username, password: "" });
+          setView("registered_success");
           setError("");
         } else {
-          setError(res.error || "Registration failure");
+          const rawErr = res.error || "Unable to create analyst account. Please try again.";
+          setError(sanitizeAuthError(rawErr, "ACCOUNT CREATION FAILED: Unable to create analyst account. Please try again."));
         }
       }
     } catch (err) {
       // Lockout or network error
-      const msg = err.message || err.response?.data?.error || err.response?.data?.message || "Neural link failure";
-      setError(msg);
+      const msg = err.message || err.response?.data?.error || err.response?.data?.message || "";
+      const defaultErr = isLogin
+        ? "Unable to connect to authentication server. Please try again."
+        : "ACCOUNT CREATION FAILED: Unable to create analyst account. Please try again.";
+      setError(sanitizeAuthError(msg, defaultErr));
     } finally {
       setIsLoading(false);
     }
@@ -520,7 +542,7 @@ export default function Auth({ onLogin }) {
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
 
             {/* Title */}
-            {!isForgot && (
+            {!isForgot && !isRegisteredSuccess && (
               <h2 className="text-2xl font-black text-white text-center mb-8 uppercase tracking-widest italic">
                 {isMFA
                   ? "MFA VERIFICATION"
@@ -569,8 +591,36 @@ export default function Auth({ onLogin }) {
               <ForgotKeyFlow onBack={() => { setView("login"); setError(""); }} />
             )}
 
+            {/* ── Registered Success Screen ─────────────────────────────────── */}
+            {isRegisteredSuccess && (
+              <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 text-center relative z-10">
+                <div className="w-16 h-16 bg-cyan-500/20 border border-cyan-500/30 rounded-2xl flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(34,211,238,0.3)]">
+                  <Check size={32} className="text-cyan-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black text-white uppercase tracking-widest italic">
+                    ANALYST ACCOUNT CREATED
+                  </h3>
+                  <p className="text-gray-400 text-xs leading-relaxed max-w-xs mx-auto">
+                    Your analyst credentials have been registered successfully.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView("login");
+                    setFormData((prev) => ({ username: prev.username, password: "" }));
+                    setError("");
+                  }}
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-black py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,211,238,0.3)] mt-6 cursor-pointer"
+                >
+                  PROCEED TO LOGIN →
+                </button>
+              </div>
+            )}
+
             {/* ── Login / Register Form ───────────────────────────────────── */}
-            {!isMFA && !isForgot && (
+            {!isMFA && !isForgot && !isRegisteredSuccess && (
               <form onSubmit={handleAuth} className="relative z-10 space-y-5">
 
                 {/* Analyst ID */}
@@ -680,10 +730,12 @@ export default function Auth({ onLogin }) {
                   className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,211,238,0.3)] mt-8 cursor-pointer"
                 >
                   {isLoading
-                    ? "ESTABLISHING LINK..."
+                    ? isLogin
+                      ? "LOGGING IN..."
+                      : "CREATING ACCOUNT..."
                     : isLogin
                     ? "INITIATE LOGIN"
-                    : "INITIALIZE AGENT"}
+                    : "CREATE ANALYST ACCOUNT →"}
                   {!isLoading && <ArrowRight size={16} />}
                 </button>
 
