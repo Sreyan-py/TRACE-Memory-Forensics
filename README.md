@@ -24,6 +24,9 @@ It operates on two fronts:
 Both interfaces share the same Volatility3 analysis core and deterministic scoring engine, guaranteeing consistent results regardless of interface.
 
 ---
+## 📑 Project Presentation
+
+[📄 View TRACE Presentation](TRACE_Presentation.pdf)
 
 ## 👥 Team TRACE
 
